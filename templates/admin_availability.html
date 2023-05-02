@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+{% load widget_tweaks %}
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+          integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+
+    <title>Doctor's Availibility Form</title>
+</head>
+<body>
+<section class="vh-100 bg-image">
+
+    <div class="mask d-flex align-items-center h-100 gradient-custom-3">
+        <div class="container h-100">
+            <div class="row d-flex justify-content-center align-items-center h-100">
+                <div class="col-12 col-md-9 col-lg-7 col-xl-6">
+                    <div class="card" style="border-radius: 15px;">
+                        <div class="card-body p-5">
+                            <h2 class="text-uppercase text-center mb-5">Doctor's Availibility Form</h2>
+
+                            <form action="" method="post" style="text-align: center; margin-top:38px ">
+                                {% csrf_token %}
+                                <div class="row">
+                                    {% for field in form %}
+                                        <div class="form-parent{% if field.field.widget.attrs.repeater_cls %} {{ field.field.widget.attrs.repeater_cls }} {% endif %} {% if field.field.widget.attrs.col_cls %} {{ field.field.widget.attrs.col_cls }} {% else %} col-md-6 {% endif %} pr-1"
+                                             {% if field.field.widget.attrs.hidden %}hidden{% endif %}>
+                                            <div class="form-group" style="text-align: left">
+                                                <small>{{ field.label }}
+                                                    {% if field.field.widget.attrs.required == "required" %}
+                                                        <span class="text-danger">*</span>
+                                                    {% endif %}</small>
+                                                <div class="input-group input-group-merge input-group-alternative">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text">
+                                                            <i class="fa {{ field.field.widget.attrs.data_icon }}"></i>
+                                                        </span>
+                                                    </div>
+                                                    {% render_field field class="form-control" placeholder=field.label %}
+                                                </div>
+                                                <small>{{ field.help_text }}</small>
+                                                {% for error in field.errors %}
+                                                    <p class="help-block">{{ error }}</p>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+
+
+                                </div>
+                                <input style="margin-top: 6px;margin-left: 13px " type="submit" value=Submit>
+
+                            </form>
+
+                            {% for message in messages %}
+                                <p id="messages">{{ message }}</p>
+                            {% endfor %}
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
+        crossorigin="anonymous"></script>
+
+
+</body>
+</html>

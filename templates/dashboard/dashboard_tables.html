@@ -1,0 +1,42 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load django_tables2 %}
+
+
+{% block main %}
+
+    <div class="content">
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card ">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card-header">
+                                <h4 class="card-title"> {{ title }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <ul class="nav" style="float: right; ">
+                                {% for link in links %}
+                                    <li class="nav-item active">
+                                        <a class="btn btn-primary btn-simple nav-link active " href="{{ link.href }}?reg=admin">{{ link.title }}</a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="table-responsive">
+                        {% render_table table %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+{% endblock %}
