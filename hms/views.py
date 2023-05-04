@@ -8,14 +8,14 @@ from django.contrib import messages
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from .forms import UserRegisterForm, UserLoginForm, UserEditForm, DoctorForm, PatientForm, AvailabilityForm, \
-    AdminAvailabilityForm, SlotsForm, EditSlotForm
+    AdminAvailabilityForm, SlotsForm, EditSlotForm, AppointmentForm
 from django.contrib.auth.models import User
 from . import models as hospital_models, tables as hospital_tables
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from . import utils as hms_utils
 from datetime import timedelta, datetime, time
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django import forms
 
 
@@ -417,7 +417,8 @@ def admin_side_avalibility(request):
             new_availability.doctor = doctor
             start_time = new_availability.starting_time
             end_time = new_availability.ending_time
-            existing_availability_slots = hospital_models.DoctorsAvailibility.objects.filter(doctor=doctor, days=new_availability.days)
+            existing_availability_slots = hospital_models.DoctorsAvailibility.objects.filter(doctor=doctor,
+                                                                                             days=new_availability.days)
 
             for existing_availability in existing_availability_slots:
                 if start_time >= existing_availability.starting_time and start_time < existing_availability.ending_time:
@@ -579,7 +580,8 @@ def edit_slot(request, pk):
             slot_end_time = editslotform.cleaned_data.get('slot_end_time')
 
             # Calculate the duration between the start and end time
-            duration = (datetime.combine(datetime.min, slot_end_time) - datetime.combine(datetime.min, slot_start_time)).total_seconds() / 60
+            duration = (datetime.combine(datetime.min, slot_end_time) - datetime.combine(datetime.min,
+                                                                                         slot_start_time)).total_seconds() / 60
 
             # Check if the duration is not equal to 15 minutes
             if duration != 15:
@@ -618,7 +620,8 @@ def add_single_slot(request):
             slot_end_time = datetime.strptime(slot_end_time_str, '%H:%M:%S').time()
 
             # Calculate the duration between the start and end time
-            duration = (datetime.combine(datetime.min, slot_end_time) - datetime.combine(datetime.min, slot_start_time)).total_seconds() / 60
+            duration = (datetime.combine(datetime.min, slot_end_time) - datetime.combine(datetime.min,
+                                                                                         slot_start_time)).total_seconds() / 60
 
             # Check if the duration is not equal to 15 minutes
             if duration != 15:
@@ -635,4 +638,36 @@ def add_single_slot(request):
         'form': form
     }
     return render(request, 'slotform.html', context)
+
+
+def appointment(request):
+    if request.method == "POST":
+        appointmentform = AppointmentForm(request.POST)
+        if appointmentform.is_valid():
+            slot=request.POST.get('slots')
+            appointmentform.save(commit=False)
+            slot=hospital_models.Slots.objects.get(pk=slot)
+            slot.is_available=False
+            slot.save()
+            appointmentform.save()
+            return JsonResponse({'status': 'success'})
+        else:
+            return JsonResponse({'status': 'error', 'errors': appointmentform.errors})
+    elif request.method == "GET":
+        doctor_id = request.GET.get('doctor')
+        if doctor_id:
+            slots = hospital_models.Slots.objects.filter(doctor_id=doctor_id, is_available=True)
+
+
+            data = [{'id': slot.id,
+                     'label': slot.slot_date.strftime('%Y-%m-%d')+" / " + slot.slot_start_time.strftime(
+                         '%H:%M %p') + ' - ' + slot.slot_end_time.strftime(
+                         '%H:%M %p')} for slot in slots]
+            return JsonResponse(data, safe=False)
+
+    form = AppointmentForm()
+    context = {
+        'form': form
+    }
+    return render(request, 'appointment_form.html', context)
 

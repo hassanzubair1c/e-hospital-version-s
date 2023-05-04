@@ -167,15 +167,38 @@ class EditSlotForm(forms.ModelForm):
         fields = ['doctor', 'slot_date', 'slot_start_time', 'slot_end_time', 'is_available']
 
 
-# class AppointmentForm(forms.ModelForm):
-#     class Meta:
-#         model = Appointment
-#         fields = ['patient']
-#
-#         widgets = {
-#             "starting_time": forms.TextInput(
-#                 attrs={"data_icon": "fa fa-calender", "required": "required", "type": "datetime-local"}),
-#             "ending_time": forms.TextInput(
-#                 attrs={"data_icon": "fa fa-calender", "required": "required", "type": "datetime-local"})
-#
-#         }
+class AppointmentForm(forms.ModelForm):
+    doctor = forms.ModelChoiceField(queryset=Doctor.objects.all(), widget=forms.Select(attrs={'id': 'doctor'}))
+    slots = forms.ChoiceField(choices=[], widget=forms.Select(attrs={'id': 'slots'}))
+
+    class Meta:
+        model = Appointment
+        fields = ['doctor', 'slots', 'patient']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['slots'].choices = []
+
+        if 'doctor' in self.data:
+            try:
+                doctor_id = int(self.data.get('doctor'))
+                slots = Slots.objects.filter(doctor_id=doctor_id, is_available=True)
+                choices = [(slot.id, slot.slot_start_time.strftime('%H:%M %p') + ' - ' + slot.slot_end_time.strftime('%H:%M %p')) for slot in slots]
+                self.fields['slots'].choices = choices
+            except (ValueError, TypeError):
+                pass
+
+        elif self.instance.pk:
+            self.fields['slots'].choices = [(self.instance.slots.id, str(self.instance.slots))]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        slots = cleaned_data.get('slots')
+        if slots:
+            cleaned_data['slots'] = Slots.objects.get(id=slots)
+        return cleaned_data
+
+
+
+
+

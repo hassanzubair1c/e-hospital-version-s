@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from month.models import MonthField
+
 
 # Create your models here.
 doctor = 'Doctor'
