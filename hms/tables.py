@@ -126,3 +126,28 @@ class SlotTable(tables.Table):
             <a href = "{}" class='btn btn-sm bg-dark text-white'><i  class = "fas fa-edit" style="color:white"></i></a>
         """, reverse('delete-slot', kwargs={"pk": record.pk}),
                            reverse('edit-slot', kwargs={"pk": record.pk}))
+
+
+class AppointmentTable(tables.Table):
+    doctor = tables.Column(accessor='slots.doctor', verbose_name='Doctor')
+    action = tables.Column(empty_values=(), verbose_name="Action")
+
+    class Meta:
+        attrs = {"class": 'table table-stripped data-table', 'data-add-url': 'Url here'}
+        model = hospital_models.Appointment
+        fields = ('doctor', 'patient', 'slots')
+
+    def render_doctor(self, record):
+        return record.slots.doctor
+
+    def render_slots(self, record):
+        return record.slots.slot_date.strftime('%Y-%m-%d') + " / " + record.slots.slot_start_time.strftime(
+            '%H:%M %p') + ' - ' + record.slots.slot_end_time.strftime(
+            '%H:%M %p')
+
+    def render_action(self, record):
+        return format_html("""
+            <a href = "{}" class='btn btn-sm bg-dark' text-white><i  class = "fa fa-trash" style="color:white"></i> </a>
+            <a href = "{}" class='btn btn-sm bg-dark text-white'><i  class = "fas fa-edit" style="color:white"></i></a>
+        """, reverse('delete-appointment', kwargs={"pk": record.pk}),
+                           reverse('edit-appointment', kwargs={"pk": record.pk}))

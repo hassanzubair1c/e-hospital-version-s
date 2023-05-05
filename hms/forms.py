@@ -176,14 +176,23 @@ class AppointmentForm(forms.ModelForm):
         fields = ['doctor', 'slots', 'patient']
 
     def __init__(self, *args, **kwargs):
+        appointment = kwargs.get('instance', None)
+        if appointment:
+            doctor_queryset = Doctor.objects.filter(id=appointment.slots.doctor.id)
+        else:
+            doctor_queryset = Doctor.objects.all()
+
         super().__init__(*args, **kwargs)
+        self.fields['doctor'].queryset = doctor_queryset
         self.fields['slots'].choices = []
 
         if 'doctor' in self.data:
             try:
                 doctor_id = int(self.data.get('doctor'))
                 slots = Slots.objects.filter(doctor_id=doctor_id, is_available=True)
-                choices = [(slot.id, slot.slot_start_time.strftime('%H:%M %p') + ' - ' + slot.slot_end_time.strftime('%H:%M %p')) for slot in slots]
+                choices = [(slot.id,
+                            slot.slot_start_time.strftime('%H:%M %p') + ' - ' + slot.slot_end_time.strftime('%H:%M %p'))
+                           for slot in slots]
                 self.fields['slots'].choices = choices
             except (ValueError, TypeError):
                 pass
@@ -197,8 +206,3 @@ class AppointmentForm(forms.ModelForm):
         if slots:
             cleaned_data['slots'] = Slots.objects.get(id=slots)
         return cleaned_data
-
-
-
-
-

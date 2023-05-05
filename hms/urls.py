@@ -31,5 +31,9 @@ urlpatterns = [
     path('edit_slot/<int:pk>/', hospital_views.edit_slot, name="edit-slot"),
     path('add_single_slot/', hospital_views.add_single_slot, name="add-slot"),
     path('appointment/', hospital_views.appointment, name="appointment"),
+    path('appointment_data/', hospital_views.appointment_data, name="appointment-data"),
+    path('delete_appointment/<int:pk>/', hospital_views.delete_appointment, name="delete-appointment"),
+    path('edit_appointment/<int:pk>/', hospital_views.edit_appointment, name="edit-appointment"),
+    path('add_appointment', hospital_views.admin_add_appointment, name="add-appointment"),
 
 ]

@@ -644,13 +644,18 @@ def appointment(request):
     if request.method == "POST":
         appointmentform = AppointmentForm(request.POST)
         if appointmentform.is_valid():
-            slot=request.POST.get('slots')
-            appointmentform.save(commit=False)
-            slot=hospital_models.Slots.objects.get(pk=slot)
-            slot.is_available=False
-            slot.save()
-            appointmentform.save()
-            return JsonResponse({'status': 'success'})
+            slot = request.POST.get('slots')
+            patient = request.POST.get('patient')
+            if not patient:
+                messages.error(request, "Please select patient")
+                # return JsonResponse({'status': 'error'})
+            else:
+                appointmentform.save(commit=False)
+                slot = hospital_models.Slots.objects.get(pk=slot)
+                slot.is_available = False
+                slot.save()
+                appointmentform.save()
+                return JsonResponse({'status': 'success'})
         else:
             return JsonResponse({'status': 'error', 'errors': appointmentform.errors})
     elif request.method == "GET":
@@ -658,9 +663,8 @@ def appointment(request):
         if doctor_id:
             slots = hospital_models.Slots.objects.filter(doctor_id=doctor_id, is_available=True)
 
-
             data = [{'id': slot.id,
-                     'label': slot.slot_date.strftime('%Y-%m-%d')+" / " + slot.slot_start_time.strftime(
+                     'label': slot.slot_date.strftime('%Y-%m-%d') + " / " + slot.slot_start_time.strftime(
                          '%H:%M %p') + ' - ' + slot.slot_end_time.strftime(
                          '%H:%M %p')} for slot in slots]
             return JsonResponse(data, safe=False)
@@ -671,3 +675,95 @@ def appointment(request):
     }
     return render(request, 'appointment_form.html', context)
 
+
+def appointment_data(request):
+    data = hospital_models.Appointment.objects.all()
+    datatable = hospital_tables.AppointmentTable(data)
+    context = {
+        'li_class': 'patient',
+        'title': 'Appointment Table',
+        'table': datatable,
+        'links': [
+            {
+                'title': 'Add Appointment',
+                'href': reverse('add-appointment')
+            }
+        ]
+    }
+    return render(request, 'dashboard/dashboard_tables.html', context)
+
+
+def delete_appointment(request, pk):
+    object = hospital_models.Appointment.objects.get(id=pk)
+    object.slots.is_available = True
+    object.slots.save()
+    object.delete()
+    return redirect('appointment-data')
+
+
+def edit_appointment(request, pk):
+    appointment = hospital_models.Appointment.objects.get(id=pk)
+    prev_slot = appointment.slots
+    if request.method == "POST":
+        appointmentform = AppointmentForm(request.POST, instance=appointment)
+        if appointmentform.is_valid():
+            slot = request.POST.get('slots')
+            patient = request.POST.get('patient')
+            appointmentform.save(commit=False)
+            if not patient:
+                messages.error(request, "Please select patient")
+            else:
+                prev_slot.is_available = True
+                prev_slot.save()
+
+                slot = hospital_models.Slots.objects.get(pk=slot)
+                appointment.slots = slot
+                slot.is_available = False
+                slot.save()
+                appointment.save()
+                appointmentform.save()
+
+                messages.success(request, 'Appointment updated successfully')
+                return redirect('appointment-data')
+        else:
+            messages.error(request, 'Appointment update failed')
+            return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment})
+    else:
+        appointmentform = AppointmentForm(instance=appointment)
+        return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment})
+
+
+def admin_add_appointment(request):
+    if request.method == "POST":
+        appointmentform = AppointmentForm(request.POST)
+        if appointmentform.is_valid():
+            slot = request.POST.get('slots')
+            patient = request.POST.get('patient')
+            if not patient:
+                messages.error(request, "Please select patient")
+                # return JsonResponse({'status': 'error'})
+            else:
+                appointmentform.save(commit=False)
+                slot = hospital_models.Slots.objects.get(pk=slot)
+                slot.is_available = False
+                slot.save()
+                appointmentform.save()
+                return redirect('appointment-data')
+        else:
+            return JsonResponse({'status': 'error', 'errors': appointmentform.errors})
+    elif request.method == "GET":
+        doctor_id = request.GET.get('doctor')
+        if doctor_id:
+            slots = hospital_models.Slots.objects.filter(doctor_id=doctor_id, is_available=True)
+
+            data = [{'id': slot.id,
+                     'label': slot.slot_date.strftime('%Y-%m-%d') + " / " + slot.slot_start_time.strftime(
+                         '%H:%M %p') + ' - ' + slot.slot_end_time.strftime(
+                         '%H:%M %p')} for slot in slots]
+            return JsonResponse(data, safe=False)
+
+    form = AppointmentForm()
+    context = {
+        'form': form
+    }
+    return render(request, 'appointment_form.html', context)

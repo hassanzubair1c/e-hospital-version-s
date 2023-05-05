@@ -58,6 +58,12 @@ class Slots(models.Model):
     is_available = models.BooleanField(default=True, null=True, blank=True)
 
 
+    def __str__(self):
+        return self.slot_date.strftime('%Y-%m-%d') + " / " + self.slot_start_time.strftime(
+                         '%H:%M %p') + ' - ' + self.slot_end_time.strftime(
+                         '%H:%M %p')
+
+
 class Appointment(models.Model):
     slots = models.ForeignKey(Slots, on_delete=models.CASCADE, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, null=True, blank=True)
