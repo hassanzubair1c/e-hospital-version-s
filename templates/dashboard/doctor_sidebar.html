@@ -1,0 +1,102 @@
+{% load static %}
+
+<div class="sidebar">
+    <!--
+      Tip 1: You can change the color of the sidebar using: data-color="blue | green | orange | red"
+  -->
+    <div class="sidebar-wrapper">
+        <div class="logo">
+            <a href="javascript:void(0)" class="simple-text logo-mini">
+                CT
+            </a>
+            <a href="javascript:void(0)" class="simple-text logo-normal">
+                Creative Tim
+            </a>
+        </div>
+        <ul class="nav">
+            <li class="active dashboard">
+                <a href="{% url 'doctor-dashboard' %}">
+                    <i class="tim-icons icon-chart-pie-36"></i>
+                    <p>Doctors Dashboard</p>
+                </a>
+            </li>
+
+            <li class="doctor">
+
+                <a class="nav-link" data-toggle="collapse" href="#pagesExamples">
+                    <i class="tim-icons icon-atom"></i>
+                    <p> Doctor
+                        <b class="caret"></b>
+                    </p>
+                </a>
+                </a>
+                <div class="collapse" id="pagesExamples">
+                    <ul class="nav">
+
+                        <li class="nav-item ">
+                            <a class="nav-link" href="{% url 'doctor-data' %}"
+                               style="padding: 8px 48px !important;">
+                                <i class="tim-icons icon-atom"></i>
+                                <p> Doctor Data</p>
+
+
+                            </a>
+                        </li>
+                        <li class="nav-item ">
+                            <a class="nav-link" href="{% url 'availability-data' %}"
+                               style="padding: 8px 48px !important;">
+                                <i class="tim-icons icon-atom"></i>
+                                <p> Doctor's Availability</p>
+
+
+                            </a>
+                        </li>
+                        <li class="nav-item ">
+                            <a class="nav-link" href="{% url 'slot-data' %}"
+                               style="padding: 8px 48px !important;">
+                                <i class="tim-icons icon-atom"></i>
+                                <p> Doctor's Slots</p>
+
+
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+
+
+            <!--<li>
+                <a href="./notifications.html">
+                    <i class="tim-icons icon-bell-55"></i>
+                    <p>Notifications</p>
+                </a>
+            </li>
+            <li>
+                <a href="./user.html">
+                    <i class="tim-icons icon-single-02"></i>
+                    <p>User Profile</p>
+                </a>
+            </li>
+
+            <li>
+                <a href="./typography.html">
+                    <i class="tim-icons icon-align-center"></i>
+                    <p>Typography</p>
+                </a>
+            </li>
+            <li>
+                <a href="./rtl.html">
+                    <i class="tim-icons icon-world"></i>
+                    <p>RTL Support</p>
+                </a>
+            </li>
+            <li class="active-pro">
+                <a href="./upgrade.html">
+                    <i class="tim-icons icon-spaceship"></i>
+                    <p>Upgrade to PRO</p>
+                </a>
+            </li>-->
+        </ul>
+    </div>
+</div>

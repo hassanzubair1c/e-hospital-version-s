@@ -24,9 +24,34 @@ from django import forms
 
 def admin_dashboard(request):
     context = {
-        'li_class': 'dashboard'
+        'li_class': 'dashboard',
+        'extends_to': 'dashboard/base.html',
+
     }
     return render(request, 'dashboard/main.html', context)
+
+
+def logout(request):
+    django_logout(request)
+    return JsonResponse({'status': 'success'})
+
+
+def doctor_dashboard(request):
+    context = {
+        'li_class': 'dashboard',
+        'extends_to': 'dashboard/doctor_base.html',
+
+    }
+    return render(request, 'dashboard/doctor_dashboard.html', context)
+
+
+def patient_dashboard(request):
+    context = {
+        'li_class': 'dashboard',
+        'extends_to': 'dashboard/patient_base.html',
+
+    }
+    return render(request, 'dashboard/patient_dashboard.html', context)
 
 
 def patient_register(request):
@@ -56,7 +81,9 @@ def patient_register(request):
 
     form = UserRegisterForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html',
+
     }
     return render(request, 'PatientRegister.html', context)
 
@@ -75,7 +102,9 @@ def patient_login(request):
             messages.error(request, "Email or password is not correct")
     form = UserLoginForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html',
+
     }
     return render(request, 'patientlogin.html', context)
 
@@ -106,7 +135,9 @@ def doctor_register(request):
 
     form = UserRegisterForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html',
+
     }
     return render(request, 'doctorRegister.html', context)
 
@@ -125,7 +156,9 @@ def doctor_login(request):
             messages.error(request, "Email or password is not correct")
     form = UserLoginForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html',
+
     }
     return render(request, 'doctorlogin.html', context)
 
@@ -155,7 +188,9 @@ def admin_register(request):
 
     form = UserRegisterForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/base.html',
+
     }
     return render(request, 'admin_register.html', context)
 
@@ -175,7 +210,9 @@ def admin_login(request):
             messages.error(request, "Email or password is not correct")
     form = UserLoginForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/base.html',
+
     }
     return render(request, 'admin_login.html', context)
 
@@ -186,6 +223,7 @@ def admin_data(request):
     context = {
         'li_class': 'admin',
         'title': 'Admin Table',
+        'extends_to': 'dashboard/base.html',
         'table': datatable,
         'links': [
             {
@@ -221,7 +259,9 @@ def edit_admin(request, pk):
         initial={'first_name': object.first_name, 'last_name': object.last_name, 'email': object.email,
                  'cnic': object.userprofile.cnic})
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/base.html',
+
     }
     return render(request, 'admin_edit_form.html', context)
 
@@ -238,6 +278,7 @@ def patient_data(request):
     context = {
         'li_class': 'patient',
         'title': 'Patient Table',
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
         'table': datatable,
         'links': [
             {
@@ -273,7 +314,9 @@ def edit_patient(request, pk):
         initial={'first_name': object.first_name, 'last_name': object.last_name, 'email': object.email,
                  'cnic': object.userprofile.cnic})
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'patient_edit_form.html', context)
 
@@ -290,6 +333,7 @@ def doctor_data(request):
     context = {
         'li_class': 'doctor',
         'title': 'Doctor Table',
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
         'table': datatable,
         'links': [
             {
@@ -325,7 +369,9 @@ def edit_doctor(request, pk):
         initial={'first_name': object.first_name, 'last_name': object.last_name, 'email': object.email,
                  'cnic': object.userprofile.cnic})
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'doctor_edit_form.html', context)
 
@@ -341,16 +387,23 @@ def delete_doctor(request, pk):
 def doctor_speciality(request):
     userprofile = request.user.userprofile
     if userprofile.role == hospital_models.doctor:
-        print(userprofile.role)
         if request.method == "POST":
             doctorform = DoctorForm(request.POST)
             if doctorform.is_valid():
-                doctorform.save()
+                doctor = request.POST.get("doctor")
+                speciality = request.POST.get("speciality")
+                fee = request.POST.get("fee")
+                doctor_object = hospital_models.Doctor.objects.get(doctor_id=doctor)
+                doctor_object.speciality = speciality
+                doctor_object.fee = fee
+                doctor_object.save()
                 return redirect("availibility")
 
     form = DoctorForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'doctor_speciality.html', context)
 
@@ -362,11 +415,17 @@ def patient_disease(request):
         if request.method == "POST":
             patientform = PatientForm(request.POST)
             if patientform.is_valid():
-                patientform.save()
+                patient = request.POST.get("patient")
+                disease_symptoms = request.POST.get("disease_symptoms")
+                patient_object = hospital_models.Patient.objects.get(patient_id=patient)
+                patient_object.disease_symptoms = disease_symptoms
+                patient_object.save()
 
     form = PatientForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'patient_disease.html', context)
 
@@ -399,7 +458,9 @@ def avalibility(request):
             availibility.save()
     form = AvailabilityForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'availibilityform.html', context)
 
@@ -432,7 +493,9 @@ def admin_side_avalibility(request):
     else:
         form = AdminAvailabilityForm()
         context = {
-            'form': form
+            'form': form,
+            'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
+
         }
         return render(request, 'admin_availability.html', context)
 
@@ -444,6 +507,7 @@ def doctor_availability_data(request):
         'li_class': 'doctor',
         'title': 'Doctor Availability',
         'table': datatable,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
         'links': [
             {
                 'title': 'Add Doctor Availability',
@@ -463,7 +527,8 @@ def edit_availability(request, pk):
             return redirect("availability-data")
     form = AvailabilityForm(instance=object)
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
     }
     return render(request, 'availibilityform.html', context)
 
@@ -545,7 +610,10 @@ def doctor_slots(request):
         else:
             form = SlotsForm()
             context = {
-                'form': form
+                'form': form,
+                'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
+                    request.user) else 'dashboard/base.html',
+
             }
             return render(request, 'slotform.html', context)
     except Exception as e:
@@ -560,6 +628,7 @@ def slot_data(request):
         'li_class': 'doctor',
         'title': 'Slots Table',
         'table': datatable,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
         'links': [
             {
                 'title': 'Add Single Slot',
@@ -671,7 +740,9 @@ def appointment(request):
 
     form = AppointmentForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'appointment_form.html', context)
 
@@ -683,6 +754,7 @@ def appointment_data(request):
         'li_class': 'patient',
         'title': 'Appointment Table',
         'table': datatable,
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
         'links': [
             {
                 'title': 'Add Appointment',
@@ -727,10 +799,16 @@ def edit_appointment(request, pk):
                 return redirect('appointment-data')
         else:
             messages.error(request, 'Appointment update failed')
-            return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment})
+            return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment,
+                                                             'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(
+                                                                 request.user) else 'dashboard/base.html',
+                                                             })
     else:
         appointmentform = AppointmentForm(instance=appointment)
-        return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment})
+        return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment,
+                                                         'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(
+                                                             request.user) else 'dashboard/base.html',
+                                                         })
 
 
 def admin_add_appointment(request):
@@ -764,6 +842,8 @@ def admin_add_appointment(request):
 
     form = AppointmentForm()
     context = {
-        'form': form
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+
     }
     return render(request, 'appointment_form.html', context)

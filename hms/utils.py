@@ -9,3 +9,15 @@ def is_doctor(user):
         return False
     except:
         return False
+
+def is_patient(user):
+    try:
+        user:hms_models.User
+        if user.userprofile.role == hms_models.patient:
+            return True
+        return False
+    except:
+        return False
+
+
+

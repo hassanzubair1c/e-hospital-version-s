@@ -34,6 +34,9 @@ urlpatterns = [
     path('appointment_data/', hospital_views.appointment_data, name="appointment-data"),
     path('delete_appointment/<int:pk>/', hospital_views.delete_appointment, name="delete-appointment"),
     path('edit_appointment/<int:pk>/', hospital_views.edit_appointment, name="edit-appointment"),
-    path('add_appointment', hospital_views.admin_add_appointment, name="add-appointment"),
+    path('add_appointment/', hospital_views.admin_add_appointment, name="add-appointment"),
+    path('doctor_dashboard/', hospital_views.doctor_dashboard, name="doctor-dashboard"),
+    path('patient_dashboard/', hospital_views.patient_dashboard, name="patient-dashboard"),
+    path('logout/', hospital_views.logout, name="logout"),
 
 ]

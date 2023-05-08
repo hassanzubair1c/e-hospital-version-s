@@ -1,4 +1,4 @@
-{% extends 'dashboard/base.html' %}
+{% extends extends_to %}
 {% load static %}
 {% load django_tables2 %}
 
@@ -20,7 +20,8 @@
                             <ul class="nav" style="float: right; ">
                                 {% for link in links %}
                                     <li class="nav-item active">
-                                        <a class="btn btn-primary btn-simple nav-link active " href="{{ link.href }}?reg=admin">{{ link.title }}</a>
+                                        <a class="btn btn-primary btn-simple nav-link active "
+                                           href="{{ link.href }}?reg=admin">{{ link.title }}</a>
                                     </li>
                                 {% endfor %}
                             </ul>
