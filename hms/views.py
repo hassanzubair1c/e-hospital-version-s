@@ -21,6 +21,9 @@ from django import forms
 
 # Create your views here.
 
+def home(request):
+    return render(request, 'Home.html')
+
 
 def admin_dashboard(request):
     context = {
@@ -33,9 +36,10 @@ def admin_dashboard(request):
 
 def logout(request):
     django_logout(request)
-    return JsonResponse({'status': 'success'})
+    return redirect('home')
 
 
+@login_required(login_url='doctor-login')
 def doctor_dashboard(request):
     context = {
         'li_class': 'dashboard',
@@ -45,6 +49,7 @@ def doctor_dashboard(request):
     return render(request, 'dashboard/doctor_dashboard.html', context)
 
 
+@login_required(login_url='patient-login')
 def patient_dashboard(request):
     context = {
         'li_class': 'dashboard',
@@ -93,11 +98,20 @@ def patient_login(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         user = authenticate(request, username=email, password=password)
-        user1 = User.objects.get(email=email)
-        role = user1.userprofile.role
-        if user is not None and role == hospital_models.patient:
-            auth_login(request, user)
-            return redirect('patient-disease')
+        if user is not None:
+            user_profile = user.userprofile
+            role = user_profile.role
+            if role == hospital_models.patient:
+                try:
+                    patient = hospital_models.Patient.objects.get(patient=user_profile)
+                    if patient.disease_symptoms is not None:
+                        auth_login(request, user)
+                        return redirect('patient-dashboard')
+                    else:
+                        auth_login(request, user)
+                        return redirect('patient-disease')
+                except hospital_models.Patient.DoesNotExist:
+                    return redirect('patient-disease')
         else:
             messages.error(request, "Email or password is not correct")
     form = UserLoginForm()
@@ -147,18 +161,26 @@ def doctor_login(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         user = authenticate(request, username=email, password=password)
-        user1 = User.objects.get(email=email)
-        role = user1.userprofile.role
-        if user is not None and role == hospital_models.doctor:
-            auth_login(request, user)
-            return redirect('doctors_speciality')
+        if user is not None:
+            user_profile = user.userprofile
+            role = user_profile.role
+            if role == hospital_models.doctor:
+                try:
+                    doctor = hospital_models.Doctor.objects.get(doctor=user_profile)
+                    if doctor.speciality is not None:
+                        auth_login(request, user)
+                        return redirect('doctor-dashboard')
+                    else:
+                        auth_login(request, user)
+                        return redirect('doctors_speciality')
+                except hospital_models.Doctor.DoesNotExist:
+                    return redirect('doctors_speciality')
         else:
             messages.error(request, "Email or password is not correct")
     form = UserLoginForm()
     context = {
         'form': form,
         'extends_to': 'dashboard/doctor_base.html',
-
     }
     return render(request, 'doctorlogin.html', context)
 
@@ -339,9 +361,13 @@ def doctor_data(request):
             {
                 'title': 'Add Doctor',
                 'href': reverse('doctor-register')
-            }
-        ]
+            }]
     }
+
+    if hms_utils.is_doctor(request.user):
+        datatable.exclude = ('action')
+        context['links'] = None
+
     return render(request, 'dashboard/dashboard_tables.html', context)
 
 
@@ -382,8 +408,6 @@ def delete_doctor(request, pk):
     return redirect('doctor-data')
 
 
-@login_required(login_url='doctor-login')
-@user_passes_test(hms_utils.is_doctor)
 def doctor_speciality(request):
     userprofile = request.user.userprofile
     if userprofile.role == hospital_models.doctor:
@@ -408,7 +432,6 @@ def doctor_speciality(request):
     return render(request, 'doctor_speciality.html', context)
 
 
-@login_required(login_url='patient-login')
 def patient_disease(request):
     userprofile = request.user.userprofile
     if userprofile.role == hospital_models.patient:
@@ -420,6 +443,7 @@ def patient_disease(request):
                 patient_object = hospital_models.Patient.objects.get(patient_id=patient)
                 patient_object.disease_symptoms = disease_symptoms
                 patient_object.save()
+                return redirect('patient-dashboard')
 
     form = PatientForm()
     context = {
@@ -491,7 +515,14 @@ def admin_side_avalibility(request):
             new_availability.save()
             return redirect('availability-data')
     else:
-        form = AdminAvailabilityForm()
+
+        if hms_utils.is_doctor(request.user):
+            doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+            form = AdminAvailabilityForm(initial={"doctor": doctor})
+            form.fields['doctor'].disabled = True
+        else:
+            form = AdminAvailabilityForm()
+
         context = {
             'form': form,
             'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
@@ -502,6 +533,9 @@ def admin_side_avalibility(request):
 
 def doctor_availability_data(request):
     data = hospital_models.DoctorsAvailibility.objects.all()
+    if hms_utils.is_doctor(request.user):
+        doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+        data = data.filter(doctor=doctor)
     datatable = hospital_tables.AvailibilityTable(data)
     context = {
         'li_class': 'doctor',
@@ -538,15 +572,6 @@ def delete_availibility(request, pk):
     object.delete()
     return redirect('availability-data')
 
-
-# def booked_appointment(request):
-#     current_month = datetime.datetime.now().month
-#     appointment = hospital_models.Appointment.objects.filter(starting_time__month=current_month)
-#     data_table = hospital_tables.AppointmentTable(appointment)
-#     context = {
-#         'table': data_table
-#     }
-#     return render(request, 'booked_appointment.html', context)
 
 def doctor_slots(request):
     try:
@@ -608,7 +633,12 @@ def doctor_slots(request):
             else:
                 return HttpResponse("Slots already available for this month")
         else:
-            form = SlotsForm()
+            if hms_utils.is_doctor(request.user):
+                doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                form = SlotsForm(initial={"doctor": doctor})
+                form.fields['doctor'].disabled = True
+            else:
+                form = SlotsForm()
             context = {
                 'form': form,
                 'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
@@ -623,6 +653,9 @@ def doctor_slots(request):
 
 def slot_data(request):
     data = hospital_models.Slots.objects.all()
+    if hms_utils.is_doctor(request.user):
+        doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+        data = data.filter(doctor=doctor)
     datatable = hospital_tables.SlotTable(data)
     context = {
         'li_class': 'doctor',
@@ -701,12 +734,18 @@ def add_single_slot(request):
                                                             slot_start_time=slot_start_time,
                                                             slot_end_time=slot_end_time, is_available=is_available)
             return redirect("slot-data")
+    else:
+        if hms_utils.is_doctor(request.user):
+            doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+            form = EditSlotForm(initial={"doctor": doctor})
+            form.fields['doctor'].disabled = True
+        else:
+            form = EditSlotForm()
 
-    form = EditSlotForm()
-    context = {
-        'form': form
-    }
-    return render(request, 'slotform.html', context)
+        context = {
+            'form': form
+        }
+        return render(request, 'slotform.html', context)
 
 
 def appointment(request):
@@ -749,12 +788,17 @@ def appointment(request):
 
 def appointment_data(request):
     data = hospital_models.Appointment.objects.all()
+    if hms_utils.is_doctor(request.user):
+        doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+        data = data.filter(slots__doctor=doctor)
     datatable = hospital_tables.AppointmentTable(data)
     context = {
         'li_class': 'patient',
         'title': 'Appointment Table',
         'table': datatable,
-        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
+            request.user) else 'dashboard/patient_base.html' if hms_utils.is_patient(
+            request.user) else 'dashboard/base.html',
         'links': [
             {
                 'title': 'Add Appointment',
@@ -762,6 +806,9 @@ def appointment_data(request):
             }
         ]
     }
+    if hms_utils.is_doctor(request.user):
+        context['links'] = None
+
     return render(request, 'dashboard/dashboard_tables.html', context)
 
 
