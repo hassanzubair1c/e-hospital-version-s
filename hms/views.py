@@ -294,9 +294,19 @@ def delete_admin(request, pk):
     return redirect('admin-data')
 
 
+from django.shortcuts import render
+from django.urls import reverse
+
+
 def patient_data(request):
-    data = hospital_models.UserProfile.objects.filter(role=hospital_models.patient)
+    if hms_utils.is_patient(request.user):
+        patient_id = hospital_models.UserProfile.objects.get(user_id=request.user.pk)
+        data = hospital_models.UserProfile.objects.filter(role=hospital_models.patient, id=patient_id.pk)
+    else:
+        data = hospital_models.UserProfile.objects.filter(role=hospital_models.patient)
+
     datatable = hospital_tables.PatientTable(data)
+
     context = {
         'li_class': 'patient',
         'title': 'Patient Table',
@@ -309,6 +319,11 @@ def patient_data(request):
             }
         ]
     }
+
+    if hms_utils.is_patient(request.user):
+        datatable.exclude = ('action')
+        context['links'] = None
+
     return render(request, 'dashboard/dashboard_tables.html', context)
 
 
