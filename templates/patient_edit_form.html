@@ -6,6 +6,7 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="apple-touch-icon" sizes="76x76" href="{% static 'assets/img/apple-icon.png' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="icon" type="image/png" href="{% static 'assets/img/favicon.png' %}">
     <title>
         Patient Edit Form
@@ -13,8 +14,10 @@
     <!--     Fonts and icons     -->
     <link href="https://fonts.googleapis.com/css?family=Poppins:200,300,400,600,700,800" rel="stylesheet"/>
     <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- Nucleo Icons -->
- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.all.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.all.css" rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 
     <link href="{% static 'assets/css/nucleo-icons.css' %}" rel="stylesheet"/>
     <!-- CSS Files -->
@@ -31,34 +34,41 @@
                 <div class="col-12 col-md-9 col-lg-7 col-xl-6">
                     <div class="card" style="border-radius: 15px;">
                         <div class="card-body p-5">
-                            <h2 class="text-uppercase text-center mb-5">Admin Edit Form</h2>
+                            <h2 class="text-uppercase text-center mb-5">Patient Edit Form</h2>
 
                             <form action="" method="post" style="text-align: center; margin-top:38px ">
                                 {% csrf_token %}
                                 <div class="row">
                                     {% for field in form %}
-                                        <div class="form-parent  col-md-6 pr-1">
+                                        <div class="form-parent{% if field.field.widget.attrs.repeater_cls %} {{ field.field.widget.attrs.repeater_cls }} {% endif %} {% if field.field.widget.attrs.col_cls %} {{ field.field.widget.attrs.col_cls }} {% else %} col-md-6 {% endif %} pr-1"
+                                             {% if field.field.widget.attrs.hidden %}hidden{% endif %}>
                                             <div class="form-group" style="text-align: left">
+                                                <small>{{ field.label }}
+                                                    {% if field.field.widget.attrs.required == "required" %}
+                                                        <span class="text-danger">*</span>
+                                                    {% endif %}</small>
                                                 <div class="input-group input-group-merge input-group-alternative">
-
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text">
+                                                            <i class="fa {{ field.field.widget.attrs.data_icon }}"></i>
+                                                        </span>
+                                                    </div>
                                                     {% render_field field class="form-control" placeholder=field.label %}
                                                 </div>
+                                                <small>{{ field.help_text }}</small>
                                                 {% for error in field.errors %}
                                                     <p class="help-block">{{ error }}</p>
                                                 {% endfor %}
                                             </div>
                                         </div>
                                     {% endfor %}
+
+
                                 </div>
                                 <button type="submit" class="btn btn-primary">Submit</button>
 
                             </form>
 
-
-
-                            {% for message in messages %}
-                                <p id="messages">{{ message }}</p>
-                            {% endfor %}
 
                         </div>
                     </div>
@@ -73,6 +83,38 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
         crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{% include 'notify_scripts.html' %}
+<script src="{% static 'assets/js/bootstrap-notify.js' %}"></script>
+<!-- Control Center for Material Dashboard: parallax effects, scripts for the example pages etc -->
+
+<!-- Material Dashboard DEMO methods, don't include it in your project! -->
+<script src="{% static 'assets/js/demo.js' %}"></script>
+{% if messages %}
+
+    {% for message in messages %}
+        <script>
+            $(document).ready(function () {
+                console.log("ready function executed ,  {{ message.tags }}")
+                md.showNotification('{{ message.tags }}', '{{ message }}');
+
+            });
+
+        </script>
+
+    {% endfor %}
+
+{% endif %}
+<script>
+    window.setTimeout(function () {
+        $(".alert").fadeTo(500, 0).slideUp(500, function () {
+            $(this).remove();
+        });
+    }, 2000); // The alert will close after 5 seconds (5000 milliseconds)
+</script>
 
 
 </body>

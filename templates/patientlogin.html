@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
 {% load static %}
 {% load widget_tweaks %}
+<html lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="apple-touch-icon" sizes="76x76" href="{% static 'assets/img/apple-icon.png' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="icon" type="image/png" href="{% static 'assets/img/favicon.png' %}">
     <title>
         Patient Login
@@ -13,8 +14,10 @@
     <!--     Fonts and icons     -->
     <link href="https://fonts.googleapis.com/css?family=Poppins:200,300,400,600,700,800" rel="stylesheet"/>
     <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- Nucleo Icons -->
- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.all.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.all.css" rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 
     <link href="{% static 'assets/css/nucleo-icons.css' %}" rel="stylesheet"/>
     <!-- CSS Files -->
@@ -23,54 +26,54 @@
     <link href="{% static 'assets/demo/demo.css' %}" rel="stylesheet"/>
 </head>
 <body>
-<section class="vh-100">
-    <div class="container py-5 h-100">
-        <div class="row d-flex justify-content-center align-items-center h-100">
-            <div class="col-md-8 col-lg-7 col-xl-6">
-                <img src="{% static 'image/patient.jpg' %}"
-                     class="img-fluid" alt="Phone image">
-            </div>
-            <div class="col-md-7 col-lg-5 col-xl-5 offset-xl-1">
-                <h3 class="mb-5 ml-6" style="margin-left: 135px">Patient Login</h3>
-                <div class="card-body p-5 text-center">
+
+<section class="vh-100 bg-image">
 
 
-                    <form action="" method="post" style="text-align: center; margin-top:38px ">
-                        {% csrf_token %}
-                        <div class="row">
-                            {% for field in form %}
-                                <div class="form-parent  col-md-6 pr-1">
-                                    <div class="form-group" style="text-align: left">
-                                        <div class="input-group input-group-merge input-group-alternative">
+    <div class="mask d-flex align-items-center h-100 gradient-custom-3">
+        <div class="container h-100">
+            <div class="row d-flex justify-content-center align-items-center h-100">
+                <div class="col-12 col-md-9 col-lg-7 col-xl-6">
+                    <div class="card" style="border-radius: 15px;">
+                        <div class="card-body p-5">
+                            <h2 class="text-uppercase text-center mb-5">Patient Login Form</h2>
+                            <form action="" method="post" style="text-align: center; margin-top:38px ">
+                                {% csrf_token %}
+                                <div class="row">
+                                    {% for field in form %}
+                                        <div class="form-parent  col-md-6 pr-1">
+                                            <div class="form-group" style="text-align: left">
+                                                <div class="input-group input-group-merge input-group-alternative">
 
-                                            {% render_field field class="form-control" placeholder=field.label %}
+                                                    {% render_field field class="form-control" placeholder=field.label %}
+                                                </div>
+                                                {% for error in field.errors %}
+                                                    <p class="help-block">{{ error }}</p>
+                                                {% endfor %}
+                                            </div>
                                         </div>
-                                        {% for error in field.errors %}
-                                            <p class="help-block">{{ error }}</p>
-                                        {% endfor %}
-                                    </div>
+                                    {% endfor %}
                                 </div>
-                            {% endfor %}
-                        </div>
                                 <button type="submit" class="btn btn-primary">Submit</button>
-                    </form>
+
+                            </form>
+                            <div class="divider d-flex align-items-center my-4">
+                                <p class="text-center fw-bold mx-3 mb-0 text-muted">OR</p>
+                            </div>
+
+                            <div class="text-center text-lg-start mt-4 pt-2">
+
+                                <p class="small fw-bold mt-2 pt-1 mb-0">You don't have an account? <a
+                                        href="{% url 'patient-register' %}"
+                                        class="link-danger">Register</a></p>
+                            </div>
 
 
-                    <div class="divider d-flex align-items-center my-4">
-                        <p class="text-center fw-bold mx-3 mb-0 text-muted">OR</p>
+                        </div>
                     </div>
-
-                    <div class="text-center text-lg-start mt-4 pt-2">
-
-                        <p class="small fw-bold mt-2 pt-1 mb-0">Don't have an account? <a
-                                href="{% url 'patient-register' %}"
-                                class="link-danger">Register</a></p>
-                    </div>
-
                 </div>
             </div>
         </div>
-    </div>
     </div>
 </section>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"
@@ -79,6 +82,40 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
         crossorigin="anonymous"></script>
-</body>
-</html>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+{% include 'notify_scripts.html' %}
+<script src="{% static 'assets/js/bootstrap-notify.js' %}"></script>
+<!-- Control Center for Material Dashboard: parallax effects, scripts for the example pages etc -->
+
+<!-- Material Dashboard DEMO methods, don't include it in your project! -->
+<script src="{% static 'assets/js/demo.js' %}"></script>
+{% if messages %}
+
+    {% for message in messages %}
+        <script>
+            $(document).ready(function () {
+                console.log("ready function executed ,  {{ message.tags }}")
+                md.showNotification('{{ message.tags }}', '{{ message }}');
+
+            });
+
+        </script>
+
+    {% endfor %}
+
+{% endif %}
+<script>
+    window.setTimeout(function () {
+        $(".alert").fadeTo(500, 0).slideUp(500, function () {
+            $(this).remove();
+        });
+    }, 2000); // The alert will close after 5 seconds (5000 milliseconds)
+</script>
+
+
+</body>
+
+</html>

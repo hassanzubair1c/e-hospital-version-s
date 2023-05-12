@@ -82,7 +82,7 @@ def patient_register(request):
             else:
                 return redirect('patient-login')
         else:
-            messages.error("Your Passwords are not matching.")
+            messages.error(request, "Your Passwords are not matching.")
 
     form = UserRegisterForm()
     context = {
@@ -145,7 +145,7 @@ def doctor_register(request):
             else:
                 return redirect('doctor-login')
         else:
-            messages.error("Your Passwords are not matching.")
+            messages.error(request, "Your Passwords are not matching.")
 
     form = UserRegisterForm()
     context = {
@@ -206,7 +206,7 @@ def admin_register(request):
             else:
                 return redirect('admin-login')
         else:
-            messages.error("Your passwords are not matching.")
+            messages.error(request, "Your passwords are not matching.")
 
     form = UserRegisterForm()
     context = {
@@ -486,10 +486,10 @@ def avalibility(request):
                 end_time = availibilityform.cleaned_data['ending_time']
 
                 if start_time >= existing_availability.starting_time and start_time < existing_availability.ending_time:
-                    raise forms.ValidationError("This availability conflicts with an existing availability.")
+                    raise messages.error(request, "This availability conflicts with an existing availability.")
 
                 if end_time > existing_availability.starting_time and end_time <= existing_availability.ending_time:
-                    raise forms.ValidationError('This availability conflicts with an existing availability.')
+                    raise messages.error(request, "This availability conflicts with an existing availability.")
 
             # Save the new availability
             availibility = availibilityform.save(commit=False)
@@ -499,6 +499,7 @@ def avalibility(request):
     context = {
         'form': form,
         'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
+        'messages': messages.get_messages(request),
 
     }
     return render(request, 'availibilityform.html', context)
@@ -522,10 +523,10 @@ def admin_side_avalibility(request):
 
             for existing_availability in existing_availability_slots:
                 if start_time >= existing_availability.starting_time and start_time < existing_availability.ending_time:
-                    raise forms.ValidationError('This availability conflicts with an existing availability.')
+                    raise messages.error(request, "This availability conflicts with an existing availability.")
 
                 if end_time > existing_availability.starting_time and end_time <= existing_availability.ending_time:
-                    raise forms.ValidationError('This availability conflicts with an existing availability.')
+                    raise messages.error(request, "This availability conflicts with an existing availability.")
 
             new_availability.save()
             return redirect('availability-data')
@@ -541,6 +542,7 @@ def admin_side_avalibility(request):
         context = {
             'form': form,
             'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
+            'messages': messages.get_messages(request),
 
         }
         return render(request, 'admin_availability.html', context)
@@ -864,12 +866,14 @@ def edit_appointment(request, pk):
             return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment,
                                                              'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(
                                                                  request.user) else 'dashboard/base.html',
+                                                             'messages': messages.get_messages(request),
                                                              })
     else:
         appointmentform = AppointmentForm(instance=appointment)
         return render(request, 'edit_appointment.html', {'form': appointmentform, 'appointment': appointment,
                                                          'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(
                                                              request.user) else 'dashboard/base.html',
+                                                         'messages': messages.get_messages(request),
                                                          })
 
 
@@ -881,7 +885,6 @@ def admin_add_appointment(request):
             patient = request.POST.get('patient')
             if not patient:
                 messages.error(request, "Please select patient")
-                # return JsonResponse({'status': 'error'})
             else:
                 appointmentform.save(commit=False)
                 slot = hospital_models.Slots.objects.get(pk=slot)
@@ -906,6 +909,7 @@ def admin_add_appointment(request):
     context = {
         'form': form,
         'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+        'messages': messages.get_messages(request),
 
     }
     return render(request, 'appointment_form.html', context)

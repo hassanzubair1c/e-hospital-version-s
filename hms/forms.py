@@ -146,6 +146,7 @@ class AdminAvailabilityForm(forms.ModelForm):
         self.fields['active'].label = "Active:"
 
 
+
 class SlotsForm(forms.ModelForm):
     month = forms.DateField(required=True, widget=forms.DateInput(
         attrs={'format': '%Y-%m', 'type': 'month'}))
