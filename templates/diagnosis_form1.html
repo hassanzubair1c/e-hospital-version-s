@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Signature Form</title>
+    <style>
+        #canvas {
+            border: 10px solid #be0101;
+        }
+    </style>
+</head>
+<body>
+<h2>Signature Form</h2>
+<form method="post" action="">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div>
+        <label for="signature">Signature:</label>
+        <br>
+        <canvas  id="canvas" width="400" height="200"></canvas>
+        <br>
+        <button type="button" onclick="clearCanvas()">Clear</button>
+        <br>
+        <input type="hidden" id="signatureData" name="signatureData">
+    </div>
+    <br>
+    <input type="submit" value="Submit">
+</form>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    let isDrawing = false;
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    function startDrawing(event) {
+        isDrawing = true;
+        draw(event);
+        canvas.style.cursor = 'crosshair';
+    }
+
+    function draw(event) {
+        if (!isDrawing) {
+            return;
+        }
+
+        const x = event.offsetX;
+        const y = event.offsetY;
+
+        context.lineWidth = 2;
+        context.lineCap = 'round';
+        context.strokeStyle = 'blue';
+
+        context.lineTo(x, y);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(x, y);
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+        context.beginPath();
+        canvas.style.cursor = 'default';
+
+        // Save the signature data as a base64-encoded PNG image
+        const signatureData = canvas.toDataURL('image/png');
+        document.getElementById('signatureData').value = signatureData;
+    }
+
+    function clearCanvas() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById('signatureData').value = '';
+    }
+</script>
+</body>
+</html>

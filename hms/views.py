@@ -1,14 +1,16 @@
 import calendar
-
+from django.core.files import File
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth import logout as django_logout
 from django.contrib import messages
+from PIL import Image
+from io import BytesIO
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from .forms import UserRegisterForm, UserLoginForm, UserEditForm, DoctorForm, PatientForm, AvailabilityForm, \
-    AdminAvailabilityForm, SlotsForm, EditSlotForm, AppointmentForm
+    AdminAvailabilityForm, SlotsForm, EditSlotForm, AppointmentForm, DiagnosisForm
 from django.contrib.auth.models import User
 from . import models as hospital_models, tables as hospital_tables
 from django.contrib.auth.decorators import login_required
@@ -36,6 +38,7 @@ def admin_dashboard(request):
 
 def logout(request):
     django_logout(request)
+    messages.success(request, "Successfully Logged Out")
     return redirect('home')
 
 
@@ -291,6 +294,7 @@ def edit_admin(request, pk):
 def delete_admin(request, pk):
     object = hospital_models.User.objects.filter(id=pk)
     object.delete()
+    messages.success(request, "Successfully Deleted Admin")
     return redirect('admin-data')
 
 
@@ -361,6 +365,7 @@ def edit_patient(request, pk):
 def delete_patient(request, pk):
     object = hospital_models.User.objects.filter(id=pk)
     object.delete()
+    messages.success(request, "Successfully Deleted Patient")
     return redirect('patient-data')
 
 
@@ -420,6 +425,7 @@ def edit_doctor(request, pk):
 def delete_doctor(request, pk):
     object = hospital_models.User.objects.get(id=pk)
     object.delete()
+    messages.success(request, "Successfully Deleted Doctor")
     return redirect('doctor-data')
 
 
@@ -587,6 +593,7 @@ def edit_availability(request, pk):
 def delete_availibility(request, pk):
     object = hospital_models.DoctorsAvailibility.objects.get(id=pk)
     object.delete()
+    messages.success(request, "Availability Successfully Deleted ")
     return redirect('availability-data')
 
 
@@ -719,6 +726,7 @@ def edit_slot(request, pk):
 def delete_slot(request, pk):
     object = hospital_models.Slots.objects.get(id=pk)
     object.delete()
+    messages.success(request, "Slot Successfully Deleted ")
     return redirect('slot-data')
 
 
@@ -834,6 +842,7 @@ def delete_appointment(request, pk):
     object.slots.is_available = True
     object.slots.save()
     object.delete()
+    messages.success(request, "Appointment Successfully Deleted ")
     return redirect('appointment-data')
 
 
@@ -913,3 +922,30 @@ def admin_add_appointment(request):
 
     }
     return render(request, 'appointment_form.html', context)
+
+
+def diagnosis(request):
+    if request.method == "POST":
+        print("enteed======")
+        diagnosisform = DiagnosisForm(request.POST, request.FILES)
+        hms_utils.save_signature_image(request.POST.get('signatureData'))
+        if diagnosisform.is_valid():
+            # obj = diagnosisform.save(commit=False)
+            obj: hospital_models.Diagnosis
+            with open('signature.png', 'rb') as f:
+                django_file = File(f)
+                model_instnce = hospital_models.Diagnosis()
+                model_instnce.note = request.POST.get('note')
+                model_instnce.doctor = hospital_models.Doctor.objects.get(id=request.POST.get('doctor'))
+                model_instnce.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
+                model_instnce.diagnosis = request.POST.get('diagnosis')
+                model_instnce.treatment = request.POST.get('treatment')
+                model_instnce.signature.save('image.png', django_file, save=True)
+            model_instnce.save()
+        else:
+            print(diagnosisform.errors)
+    form = DiagnosisForm()
+    context = {
+        'form': form
+    }
+    return render(request, 'diagnosis_form1.html', context)

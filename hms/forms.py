@@ -146,7 +146,6 @@ class AdminAvailabilityForm(forms.ModelForm):
         self.fields['active'].label = "Active:"
 
 
-
 class SlotsForm(forms.ModelForm):
     month = forms.DateField(required=True, widget=forms.DateInput(
         attrs={'format': '%Y-%m', 'type': 'month'}))
@@ -207,3 +206,15 @@ class AppointmentForm(forms.ModelForm):
         if slots:
             cleaned_data['slots'] = Slots.objects.get(id=slots)
         return cleaned_data
+
+
+# class SignatureField(forms.CharField):
+#     widget = forms.HiddenInput()
+
+
+class DiagnosisForm(forms.ModelForm):
+    # sign = SignatureField()
+
+    class Meta:
+        model = Diagnosis
+        fields = ['doctor', 'patient', 'diagnosis', 'treatment', 'note']

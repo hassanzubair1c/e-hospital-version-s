@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+import base64
+from PIL import Image
+from io import BytesIO
 
 # Create your models here.
 doctor = 'Doctor'
@@ -57,13 +59,23 @@ class Slots(models.Model):
     slot_end_time = models.TimeField(null=True, blank=True)
     is_available = models.BooleanField(default=True, null=True, blank=True)
 
-
     def __str__(self):
         return self.slot_date.strftime('%Y-%m-%d') + " / " + self.slot_start_time.strftime(
-                         '%H:%M %p') + ' - ' + self.slot_end_time.strftime(
-                         '%H:%M %p')
+            '%H:%M %p') + ' - ' + self.slot_end_time.strftime(
+            '%H:%M %p')
 
 
 class Appointment(models.Model):
     slots = models.ForeignKey(Slots, on_delete=models.CASCADE, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, null=True, blank=True)
+
+
+class Diagnosis(models.Model):
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, null=True, blank=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, null=True, blank=True)
+    diagnosis = models.TextField(null=True, blank=True)
+    treatment = models.CharField(max_length=500, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    signature = models.ImageField(upload_to='signatures/')
+    signature_data = models.TextField(null=True, blank=True)
+
