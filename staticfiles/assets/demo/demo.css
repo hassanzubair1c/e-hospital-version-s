@@ -61,3 +61,6 @@
   max-width: 530px;
   margin: 0 auto;
 }
+textarea.form-control{
+  border:1px solid #2b3553!important;
+}

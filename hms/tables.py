@@ -151,3 +151,19 @@ class AppointmentTable(tables.Table):
             <a href = "{}" class='btn btn-sm bg-dark text-white'><i  class = "fas fa-edit" style="color:white"></i></a>
         """, reverse('delete-appointment', kwargs={"pk": record.pk}),
                            reverse('edit-appointment', kwargs={"pk": record.pk}))
+
+
+class DiagnosisTable(tables.Table):
+    action = tables.Column(empty_values=(), verbose_name="Action")
+
+    class Meta:
+        attrs = {"class": 'table table-stripped data-table', 'data-add-url': 'Url here'}
+        model = hospital_models.Diagnosis
+        fields = ('doctor', 'patient', 'diagnosis', 'treatment', 'note')
+
+    def render_action(self, record):
+        return format_html("""
+            <a href = "{}" class='btn btn-sm bg-dark' text-white><i  class = "fa fa-trash" style="color:white"></i> </a>
+            <a href = "{}" class='btn btn-sm bg-dark text-white'><i  class = "fas fa-edit" style="color:white"></i></a>
+        """, reverse('delete-diagnosis', kwargs={"pk": record.pk}),
+                           reverse('edit-diagnosis', kwargs={"pk": record.pk}))

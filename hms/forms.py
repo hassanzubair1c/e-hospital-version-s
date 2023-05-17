@@ -208,13 +208,7 @@ class AppointmentForm(forms.ModelForm):
         return cleaned_data
 
 
-# class SignatureField(forms.CharField):
-#     widget = forms.HiddenInput()
-
-
 class DiagnosisForm(forms.ModelForm):
-    # sign = SignatureField()
-
     class Meta:
         model = Diagnosis
         fields = ['doctor', 'patient', 'diagnosis', 'treatment', 'note']

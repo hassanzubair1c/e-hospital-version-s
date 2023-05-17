@@ -40,5 +40,8 @@ urlpatterns = [
     path('patient_dashboard/', hospital_views.patient_dashboard, name="patient-dashboard"),
     path('logout/', hospital_views.logout, name="logout"),
     path('diagnosis/', hospital_views.diagnosis, name="diagnosis"),
+    path('diagnosis_data/', hospital_views.diagnosis_data, name="diagnosis-data"),
+    path('delete_diagnosis/<int:pk>/', hospital_views.delete_diagnosis, name="delete-diagnosis"),
+    path('edit_diagnosis/<int:pk>/', hospital_views.edit_diagnose, name="edit-diagnosis"),
 
 ]

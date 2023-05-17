@@ -926,26 +926,96 @@ def admin_add_appointment(request):
 
 def diagnosis(request):
     if request.method == "POST":
-        print("enteed======")
         diagnosisform = DiagnosisForm(request.POST, request.FILES)
-        hms_utils.save_signature_image(request.POST.get('signatureData'))
+        if request.POST.get('signature_toggle') is not None:
+            if request.POST.get('signatureData'):
+                hms_utils.save_signature_image(request.POST.get('signatureData'))
+                if diagnosisform.is_valid():
+                    with open('signature.png', 'rb') as f:
+                        django_file = File(f)
+                        model_instnce = hospital_models.Diagnosis()
+                        model_instnce.note = request.POST.get('note')
+                        model_instnce.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                        model_instnce.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
+                        model_instnce.diagnosis = request.POST.get('diagnosis')
+                        model_instnce.treatment = request.POST.get('treatment')
+                        if request.POST.get('signatureData'):
+                            model_instnce.signature.save('image.png', django_file, save=True)
+                        model_instnce.save()
+                        return redirect("diagnosis-data")
+                else:
+                    print(diagnosisform.errors)
+        else:
+            if diagnosisform.is_valid():
+                model_instnce = diagnosisform.save(commit=False)
+                model_instnce.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                model_instnce.save()
+                return redirect("diagnosis-data")
+    else:
+        if hms_utils.is_doctor(request.user):
+            doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+            form = DiagnosisForm(initial={"doctor": doctor})
+            form.fields['doctor'].disabled = True
+            print(doctor)
+        else:
+
+            form = DiagnosisForm()
+        context = {
+            'form': form,
+            'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
+                request.user) else 'dashboard/patient_base.html' if hms_utils.is_patient(
+                request.user) else 'dashboard/base.html',
+        }
+        return render(request, 'diagnosis_form.html', context)
+
+
+def diagnosis_data(request):
+    data = hospital_models.Diagnosis.objects.all()
+    if hms_utils.is_doctor(request.user):
+        doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+        data = data.filter(doctor=doctor)
+    if hms_utils.is_patient(request.user):
+        patient = hospital_models.Patient.objects.get(patient__user=request.user)
+        data = data.filter(patient=patient)
+    datatable = hospital_tables.DiagnosisTable(data)
+    context = {
+        'li_class': 'doctor',
+        'title': 'Diagnosis Table',
+        'table': datatable,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
+            request.user) else 'dashboard/patient_base.html' if hms_utils.is_patient(
+            request.user) else 'dashboard/base.html',
+
+    }
+
+    return render(request, 'dashboard/dashboard_tables.html', context)
+
+
+def edit_diagnose(request, pk):
+    diagnosis = hospital_models.Diagnosis.objects.get(id=pk)
+    if request.method == "POST":
+        diagnosisform = DiagnosisForm(request.POST, request.FILES, instance=diagnosis)
         if diagnosisform.is_valid():
-            # obj = diagnosisform.save(commit=False)
-            obj: hospital_models.Diagnosis
-            with open('signature.png', 'rb') as f:
-                django_file = File(f)
-                model_instnce = hospital_models.Diagnosis()
-                model_instnce.note = request.POST.get('note')
-                model_instnce.doctor = hospital_models.Doctor.objects.get(id=request.POST.get('doctor'))
-                model_instnce.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
-                model_instnce.diagnosis = request.POST.get('diagnosis')
-                model_instnce.treatment = request.POST.get('treatment')
-                model_instnce.signature.save('image.png', django_file, save=True)
-            model_instnce.save()
+            diagnosis.note = request.POST.get('note')
+            diagnosis.doctor = hospital_models.Doctor.objects.get(id=request.POST.get('doctor'))
+            diagnosis.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
+            diagnosis.diagnosis = request.POST.get('diagnosis')
+            diagnosis.treatment = request.POST.get('treatment')
+            diagnosis.save()
+            messages.success(request, 'Diagnosis updated successfully')
+            return redirect('diagnosis-data')
         else:
             print(diagnosisform.errors)
-    form = DiagnosisForm()
+
+    form = DiagnosisForm(instance=diagnosis)
     context = {
         'form': form
     }
-    return render(request, 'diagnosis_form1.html', context)
+    return render(request, 'diagnosis_form.html', context)
+
+
+def delete_diagnosis(request, pk):
+    object = hospital_models.Diagnosis.objects.get(id=pk)
+    object.delete()
+    messages.success(request, "Diagnosis Successfully Deleted ")
+    return redirect('diagnosis-data')

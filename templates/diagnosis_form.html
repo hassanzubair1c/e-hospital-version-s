@@ -26,7 +26,7 @@
     <link href="{% static 'assets/demo/demo.css' %}" rel="stylesheet"/>
 </head>
 <body>
-<section class="vh-100 bg-image">
+<section class=" bg-image">
 
     <div class="mask d-flex align-items-center h-100 gradient-custom-3">
         <div class="container h-100">
@@ -34,39 +34,40 @@
                 <div class="col-12 col-md-9 col-lg-7 col-xl-6">
                     <div class="card" style="border-radius: 15px;">
                         <div class="card-body p-5">
-                            <h2 class="text-uppercase text-center mb-5">Diagnosis Form</h2>
-
-                            <form action="" method="post" style="text-align: center; margin-top:38px ">
+                            <form action="" method="post" style="text-align: center; margin-top:38px">
                                 {% csrf_token %}
-                                <div class="row">
+                                <div class="mt-4" id="form-obj"><h1 style="text-align: center;">
+                                    Medical Diagnosis
+                                    From</h1>
                                     {% for field in form %}
-                                        <div class="form-parent{% if field.field.widget.attrs.repeater_cls %} {{ field.field.widget.attrs.repeater_cls }} {% endif %} {% if field.field.widget.attrs.col_cls %} {{ field.field.widget.attrs.col_cls }} {% else %} col-md-6 {% endif %} pr-1"
-                                             {% if field.field.widget.attrs.hidden %}hidden{% endif %}>
-                                            <div class="form-group" style="text-align: left">
-                                                <small>{{ field.label }}
-                                                    {% if field.field.widget.attrs.required == "required" %}
-                                                        <span class="text-danger">*</span>
-                                                    {% endif %}</small>
-                                                <div class="input-group input-group-merge input-group-alternative">
-                                                    <div class="input-group-prepend">
-                                                        <span class="input-group-text">
-                                                            <i class="fa {{ field.field.widget.attrs.data_icon }}"></i>
-                                                        </span>
-                                                    </div>
-                                                    {% render_field field class="form-control" placeholder=field.label %}
-                                                </div>
-                                                <small>{{ field.help_text }}</small>
-                                                {% for error in field.errors %}
-                                                    <p class="help-block">{{ error }}</p>
-                                                {% endfor %}
-                                            </div>
+                                        <div class="">
+                                            <label>{{ field.label }}</label>
+                                            {% render_field field class="form-control" %}
+                                            {#                                            <input type="text" class="form-control" placeholder="Doctor name">#}
                                         </div>
                                     {% endfor %}
-
-
+                                    <div>
+                                        <input type="checkbox" name="signature_toggle" id="toggleSignature">
+                                        <label for="toggleSignature">Toggle Signature</label>
+                                    </div>
+                                    <div id="signatureContainer" style="display: none;">
+                                        <label for="signature">Signature:</label>
+                                        <br>
+                                        <canvas id="canvas" width="400" height="200"
+                                                style="border:2px solid rgb(74, 91, 143);"></canvas>
+                                        <br>
+                                        <button type="button" onclick="clearCanvas()">Clear</button>
+                                        <br>
+                                        <input type="hidden" id="signatureData" name="signatureData" required>
+                                    </div>
+                                    <div class="row mt-4" style="justify-content: center;">
+                                        <div class="col-lg-3 ">
+                                            <button type="submit" class="btn btn-primary" style="border-radius: 16px;">
+                                                Submit
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Submit</button>
-
                             </form>
 
 
@@ -115,7 +116,84 @@
         });
     }, 2000); // The alert will close after 5 seconds (5000 milliseconds)
 </script>
+<script>
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    let isDrawing = false;
 
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
 
+    function startDrawing(event) {
+        isDrawing = true;
+        draw(event);
+        canvas.style.cursor = 'crosshair';
+    }
+
+    function draw(event) {
+        if (!isDrawing) {
+            return;
+        }
+
+        const x = event.offsetX;
+        const y = event.offsetY;
+
+        context.lineWidth = 2;
+        context.lineCap = 'round';
+        context.strokeStyle = 'blue';
+
+        context.lineTo(x, y);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(x, y);
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+        context.beginPath();
+        canvas.style.cursor = 'default';
+
+        // Save the signature data as a base64-encoded PNG image
+        const signatureData = canvas.toDataURL('image/png');
+        document.getElementById('signatureData').value = signatureData;
+    }
+
+    function validateSignature() {
+        var canvas = document.getElementById("canvas");
+        var signatureData = document.getElementById("signatureData");
+        var signatureError = document.getElementById("signatureError");
+
+        if (canvas.toDataURL() !== canvas.toDataURL("image/png")) {
+            // Signature is missing
+            signatureError.style.display = "block";
+            signatureData.value = "";
+            return false;
+        }
+        return true;
+    }
+
+    function clearCanvas() {
+        var canvas = document.getElementById("canvas");
+        var context = canvas.getContext("2d");
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById("signatureError").style.display = "none";
+        document.getElementById("signatureData").value = "";
+    }
+
+</script>
+<script>
+    const toggleSignature = document.getElementById('toggleSignature');
+    const signatureContainer = document.getElementById('signatureContainer');
+
+    toggleSignature.addEventListener('change', function () {
+        if (toggleSignature.checked) {
+            signatureContainer.style.display = 'block';
+        } else {
+            signatureContainer.style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>

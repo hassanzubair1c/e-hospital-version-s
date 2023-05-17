@@ -74,8 +74,9 @@ class Diagnosis(models.Model):
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, null=True, blank=True)
     diagnosis = models.TextField(null=True, blank=True)
-    treatment = models.CharField(max_length=500, null=True, blank=True)
+    treatment = models.TextField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)
     signature = models.ImageField(upload_to='signatures/')
     signature_data = models.TextField(null=True, blank=True)
-
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
