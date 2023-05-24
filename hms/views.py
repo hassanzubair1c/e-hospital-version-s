@@ -1,12 +1,14 @@
 import calendar
 from django.core.files import File
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth import logout as django_logout
 from django.contrib import messages
 from PIL import Image
 from io import BytesIO
+
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from .forms import UserRegisterForm, UserLoginForm, UserEditForm, DoctorForm, PatientForm, AvailabilityForm, \
@@ -19,6 +21,7 @@ from . import utils as hms_utils
 from datetime import timedelta, datetime, time
 from django.http import HttpResponse, JsonResponse
 from django import forms
+from django.core.mail import send_mail
 
 
 # Create your views here.
@@ -296,10 +299,6 @@ def delete_admin(request, pk):
     object.delete()
     messages.success(request, "Successfully Deleted Admin")
     return redirect('admin-data')
-
-
-from django.shortcuts import render
-from django.urls import reverse
 
 
 def patient_data(request):
@@ -933,30 +932,67 @@ def diagnosis(request):
                 if diagnosisform.is_valid():
                     with open('signature.png', 'rb') as f:
                         django_file = File(f)
-                        model_instnce = hospital_models.Diagnosis()
-                        model_instnce.note = request.POST.get('note')
-                        model_instnce.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
-                        model_instnce.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
-                        model_instnce.diagnosis = request.POST.get('diagnosis')
-                        model_instnce.treatment = request.POST.get('treatment')
+                        model_instance = hospital_models.Diagnosis()
+                        model_instance.note = request.POST.get('note')
+                        model_instance.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                        model_instance.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
+                        model_instance.diagnosis = request.POST.get('diagnosis')
+                        model_instance.treatment = request.POST.get('treatment')
                         if request.POST.get('signatureData'):
-                            model_instnce.signature.save('image.png', django_file, save=True)
-                        model_instnce.save()
+                            model_instance.signature.save('image.png', django_file, save=True)
+                        model_instance.save()
+                        messages.success(request, "Diagnose added successfully")
+
+                        patient_email = model_instance.patient.patient.user.email
+                        patient_name = model_instance.patient.patient.user.get_full_name()
+                        doctor_name = model_instance.doctor.doctor.user.get_full_name()
+                        subject = "Diagnosis Report"
+                        message = f"Dear {patient_name},\n\nYour diagnosis report has been made by Dr. {doctor_name}. You can check it by Logging In your dashboard. "
+                        send_mail(
+                            subject,
+                            message,
+                            'sarmadaftab0@gmail.com',
+                            [patient_email],
+                            fail_silently=True,
+                        )
+                        email = hospital_models.Email.objects.create(doctor=model_instance.doctor,
+                                                                     patient=model_instance.patient,
+                                                                     email=patient_email,
+                                                                     message=message)
                         return redirect("diagnosis-data")
                 else:
                     print(diagnosisform.errors)
         else:
             if diagnosisform.is_valid():
-                model_instnce = diagnosisform.save(commit=False)
-                model_instnce.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
-                model_instnce.save()
+                model_instance = diagnosisform.save(commit=False)
+                model_instance.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                model_instance.save()
+                messages.success(request, "Diagnose added successfully")
+                patient_email = model_instance.patient.patient.user.email
+                patient_name = model_instance.patient.patient.user.get_full_name()
+                doctor_name = model_instance.doctor.doctor.user.get_full_name()
+                subject = "Diagnosis Report"
+                message = f"Dear {patient_name}, Your diagnosis report has been made by Dr. {doctor_name}. You can check it by Logging In your dashboard."
+
+                send_mail(
+                    subject,
+                    message,
+                    'sarmadaftab0@gmail.com',
+                    [patient_email],
+                    fail_silently=True
+                )
+                email = hospital_models.Email.objects.create(doctor=model_instance.doctor,
+                                                             patient=model_instance.patient,
+                                                             email=patient_email, message=message)
+
                 return redirect("diagnosis-data")
+
     else:
         if hms_utils.is_doctor(request.user):
             doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
             form = DiagnosisForm(initial={"doctor": doctor})
             form.fields['doctor'].disabled = True
-            print(doctor)
+
         else:
 
             form = DiagnosisForm()
@@ -977,7 +1013,9 @@ def diagnosis_data(request):
     if hms_utils.is_patient(request.user):
         patient = hospital_models.Patient.objects.get(patient__user=request.user)
         data = data.filter(patient=patient)
+
     datatable = hospital_tables.DiagnosisTable(data)
+
     context = {
         'li_class': 'doctor',
         'title': 'Diagnosis Table',
@@ -987,6 +1025,8 @@ def diagnosis_data(request):
             request.user) else 'dashboard/base.html',
 
     }
+    datatable.request = request
+    # datatable.render_action = hospital_tables.DiagnosisTable.render_action
 
     return render(request, 'dashboard/dashboard_tables.html', context)
 
@@ -1019,3 +1059,20 @@ def delete_diagnosis(request, pk):
     object.delete()
     messages.success(request, "Diagnosis Successfully Deleted ")
     return redirect('diagnosis-data')
+
+
+def view_diagnosis(request):
+    id = request.GET.get('id')
+    diagnosis = hospital_models.Diagnosis.objects.get(pk=id)
+    form = DiagnosisForm(instance=diagnosis)
+    for field in form.fields.values():
+        field.widget.attrs['disabled'] = True
+    context = {
+        'form': form,
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
+            request.user) else 'dashboard/patient_base.html' if hms_utils.is_patient(
+            request.user) else 'dashboard/base.html',
+
+    }
+    form_html = render_to_string("dashboard/diagonosis_for.html", context, request)
+    return JsonResponse(form_html, safe=False)

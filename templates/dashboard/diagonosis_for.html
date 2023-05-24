@@ -1,0 +1,22 @@
+{% load static %}
+{% load widget_tweaks %}
+
+<form action="" method="post" style="text-align: center; margin-top:38px">
+    {% csrf_token %}
+    <div class="mt-4" id="form-obj">
+        <button type="button" onclick="saveAsPDF()"
+                style="float: right;top: 20px!important;margin-top: -35px;background-color: rgb(33, 35, 51)!important;">
+            <i class="fas fa-print"></i>
+        </button>
+        {% for field in form %}
+            <div class="">
+                <label style="rgba(244, 242, 238, 0.6)!important;">{{ field.label }}</label>
+                {% render_field field class="form-control" %}
+            </div>
+        {% endfor %}
+
+        <div class="row mt-4" style="justify-content: center;">
+
+        </div>
+    </div>
+</form>

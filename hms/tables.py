@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django.urls import reverse
 from django.utils.html import format_html
 from . import models as hospital_models
+from . import utils as hms_utils
 
 
 class AdminTable(tables.Table):
@@ -162,8 +163,18 @@ class DiagnosisTable(tables.Table):
         fields = ('doctor', 'patient', 'diagnosis', 'treatment', 'note')
 
     def render_action(self, record):
-        return format_html("""
-            <a href = "{}" class='btn btn-sm bg-dark' text-white><i  class = "fa fa-trash" style="color:white"></i> </a>
-            <a href = "{}" class='btn btn-sm bg-dark text-white'><i  class = "fas fa-edit" style="color:white"></i></a>
-        """, reverse('delete-diagnosis', kwargs={"pk": record.pk}),
-                           reverse('edit-diagnosis', kwargs={"pk": record.pk}))
+        if hms_utils.is_patient(self.request.user):
+            return format_html(
+                """<a class='btn text-success leads_detail btn-sm' href='{detail}' id='diagnosis' object_id={id} onclick='diagnosis_detail({input_id})' data-toggle="modal" data-target="#costumModal30"><i class='fa fa-eye'></i></a>""".format(
+
+                    detail='#',
+                    id=record.id,
+                    input_id=record.id
+
+                ))
+        else:
+            return format_html("""
+                <a href = "{}" class='btn btn-sm bg-dark' text-white><i  class = "fa fa-trash" style="color:white"></i> </a>
+                <a href = "{}" class='btn btn-sm bg-dark text-white'><i  class = "fas fa-edit" style="color:white"></i></a>
+            """, reverse('delete-diagnosis', kwargs={"pk": record.pk}),
+                               reverse('edit-diagnosis', kwargs={"pk": record.pk}))
