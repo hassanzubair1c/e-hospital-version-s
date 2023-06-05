@@ -43,5 +43,6 @@ urlpatterns = [
     path('diagnosis_data/', hospital_views.diagnosis_data, name="diagnosis-data"),
     path('delete_diagnosis/<int:pk>/', hospital_views.delete_diagnosis, name="delete-diagnosis"),
     path('edit_diagnosis/<int:pk>/', hospital_views.edit_diagnose, name="edit-diagnosis"),
+    path('view_diagnosis/', hospital_views.view_diagnosis, name="view-diagnosis"),
 
 ]

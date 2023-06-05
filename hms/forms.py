@@ -137,8 +137,14 @@ class AdminAvailabilityForm(forms.ModelForm):
                 attrs={"data_icon": "fa fa-calender", "required": "required", "type": "time"}),
             "ending_time": forms.TextInput(
                 attrs={"data_icon": "fa fa-calender", "required": "required", "type": "time"}),
-            "active": CheckboxInput()
-
+            # "active": CheckboxInput()
+            'active': forms.CheckboxInput(
+                attrs={
+                    'class': 'my-checkbox-class',
+                    'id': 'my-checkbox-id',
+                    'checked': True  # Set an initial value for the checkbox
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):

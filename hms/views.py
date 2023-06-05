@@ -7,7 +7,6 @@ from django.contrib.auth import logout as django_logout
 from django.contrib import messages
 from PIL import Image
 from io import BytesIO
-
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -16,11 +15,9 @@ from .forms import UserRegisterForm, UserLoginForm, UserEditForm, DoctorForm, Pa
 from django.contrib.auth.models import User
 from . import models as hospital_models, tables as hospital_tables
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.decorators import user_passes_test
 from . import utils as hms_utils
 from datetime import timedelta, datetime, time
 from django.http import HttpResponse, JsonResponse
-from django import forms
 from django.core.mail import send_mail
 
 
@@ -30,6 +27,7 @@ def home(request):
     return render(request, 'Home.html')
 
 
+@login_required(login_url='admin-login')
 def admin_dashboard(request):
     context = {
         'li_class': 'dashboard',
@@ -83,9 +81,13 @@ def patient_register(request):
             hospital_models.Patient.objects.create(patient=user_profile)
             if registered_from == 'admin':
                 if user is not None and user_profile.role == hospital_models.patient:
-                    auth_login(request, user)
+                    messages.success(request, f"Account succefully created ")
                     return redirect('patient-data')
             else:
+                auth_login(request, user)
+                patient_name = hospital_models.Patient.objects.get(patient__user=request.user)
+                print("@@@@@@@@@@@@@@", patient_name)
+                messages.success(request, f"Account successfully created for {patient_name}")
                 return redirect('patient-login')
         else:
             messages.error(request, "Your Passwords are not matching.")
@@ -93,7 +95,7 @@ def patient_register(request):
     form = UserRegisterForm()
     context = {
         'form': form,
-        'extends_to': 'dashboard/patient_base.html',
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
 
     }
     return render(request, 'PatientRegister.html', context)
@@ -103,6 +105,8 @@ def patient_login(request):
     if request.method == "POST":
         email = request.POST.get('email')
         password = request.POST.get('password')
+        user = User.objects.get(username=email)
+        print(user)
         user = authenticate(request, username=email, password=password)
         if user is not None:
             user_profile = user.userprofile
@@ -111,7 +115,9 @@ def patient_login(request):
                 try:
                     patient = hospital_models.Patient.objects.get(patient=user_profile)
                     if patient.disease_symptoms is not None:
+                        patient_name = hospital_models.Patient.objects.get(patient__user=user)
                         auth_login(request, user)
+                        messages.success(request, f"Welcome {patient_name}")
                         return redirect('patient-dashboard')
                     else:
                         auth_login(request, user)
@@ -146,9 +152,12 @@ def doctor_register(request):
             hospital_models.Doctor.objects.create(doctor=user_profile)
             if registered_from == 'admin':
                 if user is not None and user_profile.role == hospital_models.doctor:
-                    auth_login(request, user)
-                    return redirect('doctor-data')
+                    messages.success(request, f"Account succefully created. ")
+                    return redirect('doctor-login')
             else:
+                auth_login(request, user)
+                doctor_name = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                messages.success(request, f"Account succefully created for Dr. {doctor_name} ")
                 return redirect('doctor-login')
         else:
             messages.error(request, "Your Passwords are not matching.")
@@ -156,7 +165,7 @@ def doctor_register(request):
     form = UserRegisterForm()
     context = {
         'form': form,
-        'extends_to': 'dashboard/doctor_base.html',
+        'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(request.user) else 'dashboard/base.html',
 
     }
     return render(request, 'doctorRegister.html', context)
@@ -175,6 +184,8 @@ def doctor_login(request):
                     doctor = hospital_models.Doctor.objects.get(doctor=user_profile)
                     if doctor.speciality is not None:
                         auth_login(request, user)
+                        doctor_name = hospital_models.Doctor.objects.get(doctor__user=user)
+                        messages.success(request, f"Welcome Dr. {doctor_name}")
                         return redirect('doctor-dashboard')
                     else:
                         auth_login(request, user)
@@ -208,8 +219,12 @@ def admin_register(request):
             if registered_from == 'admin':
                 if user is not None and user_profile.role == hospital_models.admin:
                     auth_login(request, user)
+                    admin_name = user.userprofile.user.get_full_name()
+                    messages.success(request, f"Account successfully created for {admin_name}")
                     return redirect('admin-data')
             else:
+                admin_name = user.userprofile.user.get_full_name()
+                messages.success(request, f"Account successfully created for {admin_name}")
                 return redirect('admin-login')
         else:
             messages.error(request, "Your passwords are not matching.")
@@ -225,6 +240,9 @@ def admin_register(request):
 
 @csrf_exempt
 def admin_login(request):
+    slots = hospital_models.Slots.objects.all()
+    for s in slots:
+        s.delete()
     if request.method == "POST":
         email = request.POST.get('email')
         password = request.POST.get('password')
@@ -233,6 +251,8 @@ def admin_login(request):
         role = user1.userprofile.role
         if user is not None and role == hospital_models.admin:
             auth_login(request, user)
+            admin_name = user.userprofile.user.get_full_name()
+            messages.success(request, f"Welcome {admin_name}")
             return redirect('admin-dashboard')
         else:
             messages.error(request, "Email or password is not correct")
@@ -500,6 +520,7 @@ def avalibility(request):
             availibility = availibilityform.save(commit=False)
             availibility.doctor = doctor
             availibility.save()
+            return redirect('doctor-data')
     form = AvailabilityForm()
     context = {
         'form': form,
@@ -601,9 +622,13 @@ def doctor_slots(request):
         if request.method == 'POST':
             form = SlotsForm(request.POST)
             year_month = request.POST.get('month')  # Here we are getting year and month from doctor
-            doctor_id = request.POST.get('doctor')  # Here we are getting who is doctor
-            doctor = hospital_models.Doctor.objects.get(
-                id=doctor_id)  # In this ORM we are getting id of doctor from Doctor model
+            doctor_id = request.POST.get('doctor', None)  # Here we are getting who is doctor
+            if not doctor_id:
+                doctor = hospital_models.Doctor.objects.get(
+                    doctor__user=request.user)
+            else:
+                doctor = hospital_models.Doctor.objects.get(
+                    id=doctor_id)  # In this ORM we are getting id of doctor from Doctor model
             available_days = doctor.doctorsavailibility_set.all()  # Here we are backtracking and getting doctor availability all data by going from doctor foreign key which is present in doctor availability form
             month = int(year_month.split('-')[1])  # Here we are splitting month from year_month we are getting
             available_slots = hospital_models.Slots.objects.filter(doctor=doctor,
@@ -652,7 +677,7 @@ def doctor_slots(request):
                                                                             slot_start_time=slot_start_time,
                                                                             slot_end_time=slot_end_time)  # Here by using create ORM we are creating the slots and saving it in database
                             slot_datetime = slot_end_datetime
-                return HttpResponse("Success")
+                return redirect("slot-data")
             else:
                 return HttpResponse("Slots already available for this month")
         else:
@@ -696,9 +721,9 @@ def slot_data(request):
 
 
 def edit_slot(request, pk):
-    object = hospital_models.Slots.objects.get(id=pk)
+    slot = hospital_models.Slots.objects.get(id=pk)
     if request.method == "POST":
-        editslotform = EditSlotForm(request.POST, instance=object)
+        editslotform = EditSlotForm(request.POST, instance=slot)
         if editslotform.is_valid():
             # Get the start and end time of the edited slot
             slot_start_time = editslotform.cleaned_data.get('slot_start_time')
@@ -713,13 +738,25 @@ def edit_slot(request, pk):
                 raise ValidationError("Slot duration must be exactly 15 minutes.")
 
             # Save the edited slot if it is valid
-            editslotform.save()
+            new_slot = editslotform.save(commit=False)
+            # Set the 'doctor' field manually
+            new_slot.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+            new_slot.save()
             return redirect("slot-data")
-    form = EditSlotForm(instance=object)
-    context = {
-        'form': form
-    }
-    return render(request, 'slotform.html', context)
+    else:
+        if hms_utils.is_doctor(request.user):
+            # doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+            doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+            form = EditSlotForm(initial={"doctor": doctor}, instance=slot)
+            form.fields['doctor'].disabled = True
+        else:
+            form = EditSlotForm(instance=slot)
+        context = {
+            'form': form,
+            'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
+                request.user) else 'dashboard/base.html',
+        }
+        return render(request, 'slotform.html', context)
 
 
 def delete_slot(request, pk):
@@ -777,17 +814,37 @@ def appointment(request):
         appointmentform = AppointmentForm(request.POST)
         if appointmentform.is_valid():
             slot = request.POST.get('slots')
-            patient = request.POST.get('patient')
-            if not patient:
-                messages.error(request, "Please select patient")
-                # return JsonResponse({'status': 'error'})
+            patient_id = request.POST.get('patient')
+            if not patient_id:
+                messages.error(request, "Please select a patient")
             else:
-                appointmentform.save(commit=False)
+                patient = hospital_models.Patient.objects.get(pk=patient_id)
+                model_instance = appointmentform.save(commit=False)
                 slot = hospital_models.Slots.objects.get(pk=slot)
                 slot.is_available = False
                 slot.save()
-                appointmentform.save()
-                return JsonResponse({'status': 'success'})
+                model_instance.patient = patient
+                model_instance.save()
+                doctor_name = slot.doctor.doctor.user.get_full_name()
+                patient_name = patient.patient.user.get_full_name()
+                patient_email = patient.patient.user.email
+                res_slot_date = slot.slot_date
+                res_slot_str_time = slot.slot_start_time
+                res_slot_end_time = slot.slot_end_time
+                subject = "Appointment Alert"
+                message = f"Dear {patient_name},\n\nYour appointment for {res_slot_date} from {res_slot_str_time} to {res_slot_end_time} is confirmed with Dr. {doctor_name}."
+                send_mail(
+                    subject,
+                    message,
+                    'tm825141@gmail.com',
+                    [patient_email],
+                    fail_silently=True,
+                )
+                email = hospital_models.Email.objects.create(doctor=slot.doctor,
+                                                             patient=model_instance.patient,
+                                                             email=patient_email,
+                                                             message=message)
+                return redirect('appointment-data')
         else:
             return JsonResponse({'status': 'error', 'errors': appointmentform.errors})
     elif request.method == "GET":
@@ -805,9 +862,9 @@ def appointment(request):
     context = {
         'form': form,
         'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
-
     }
     return render(request, 'appointment_form.html', context)
+
 
 
 def appointment_data(request):
@@ -815,6 +872,10 @@ def appointment_data(request):
     if hms_utils.is_doctor(request.user):
         doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
         data = data.filter(slots__doctor=doctor)
+
+    if hms_utils.is_patient(request.user):
+        patient = hospital_models.Patient.objects.get(patient__user=request.user)
+        data = data.filter(patient=patient)
     datatable = hospital_tables.AppointmentTable(data)
     context = {
         'li_class': 'patient',
@@ -823,15 +884,23 @@ def appointment_data(request):
         'extends_to': 'dashboard/doctor_base.html' if hms_utils.is_doctor(
             request.user) else 'dashboard/patient_base.html' if hms_utils.is_patient(
             request.user) else 'dashboard/base.html',
-        'links': [
+    }
+    if hms_utils.is_patient(request.user):
+        context['links'] = [
             {
                 'title': 'Add Appointment',
                 'href': reverse('add-appointment')
             }
         ]
-    }
-    if hms_utils.is_doctor(request.user):
+    elif hms_utils.is_doctor(request.user):
         context['links'] = None
+    else:
+        context['links'] = [
+            {
+                'title': 'Add Appointment',
+                'href': reverse('appointment')
+            }
+        ]
 
     return render(request, 'dashboard/dashboard_tables.html', context)
 
@@ -841,6 +910,24 @@ def delete_appointment(request, pk):
     object.slots.is_available = True
     object.slots.save()
     object.delete()
+    patient_name = object.patient.patient.user.get_full_name()
+    doctor_name = object.slots.doctor.doctor.user.get_full_name()
+    patient_email = object.patient.patient.user.email
+    slot_data = object.slots.slot_date
+    subject = "Appointment Alert"
+    message = f"Dear {patient_name},\n\nYour appointment for {slot_data} with Dr. {doctor_name} is cancelled."
+    send_mail(
+        subject,
+        message,
+        'tm825141@gmail.com',
+        [patient_email],
+        fail_silently=True,
+    )
+    email = hospital_models.Email.objects.create(doctor=object.slots.doctor,
+                                                 patient=object.patient,
+                                                 email=patient_email,
+                                                 message=message)
+
     messages.success(request, "Appointment Successfully Deleted ")
     return redirect('appointment-data')
 
@@ -885,20 +972,113 @@ def edit_appointment(request, pk):
                                                          })
 
 
+# def admin_add_appointment(request):
+#     if request.method == "POST":
+#         appointmentform = AppointmentForm(request.POST)
+#         if appointmentform.is_valid():
+#             slot = request.POST.get('slots')
+#             # patient = request.POST.get('patient', None)
+#             print("!!!!!!!!!!!!!!!!!!!!!", request.user)
+#             patient = hospital_models.Patient.objects.get(patient__user=request.user)
+#             if not patient:
+#                 messages.error(request, "Please select patient")
+#
+#             else:
+#                 model_instance = appointmentform.save(commit=False)
+#                 slot = hospital_models.Slots.objects.get(pk=slot)
+#                 slot.is_available = False
+#                 slot.save()
+#                 doctor_name = slot.doctor.doctor.user.get_full_name()
+#                 patient_name = model_instance.patient.patient.user.get_full_name()
+#                 patient_email = model_instance.patient.patient.user.email
+#                 # model_instance.patient= patient
+#                 model_instance.save()
+#                 res_slot_date = slot.slot_date
+#                 res_slot_str_time = slot.slot_start_time
+#                 res_slot_end_time = slot.slot_end_time
+#                 subject = "Appointment Alert"
+#                 message = f"Dear {patient_name},\n\nYour appointment for {res_slot_date} from {res_slot_str_time} to {res_slot_end_time} is confirmed with Dr. {doctor_name}."
+#                 send_mail(
+#                     subject,
+#                     message,
+#                     'tm825141@gmail.com',
+#                     [patient_email],
+#                     fail_silently=True,
+#                 )
+#                 email = hospital_models.Email.objects.create(doctor=slot.doctor,
+#                                                              patient=model_instance.patient,
+#                                                              email=patient_email,
+#                                                              message=message)
+#
+#                 return redirect('appointment-data')
+#         else:
+#             return JsonResponse({'status': 'error', 'errors': appointmentform.errors})
+#     elif request.method == "GET":
+#         doctor_id = request.GET.get('doctor')
+#         if doctor_id:
+#             slots = hospital_models.Slots.objects.filter(doctor_id=doctor_id, is_available=True)
+#
+#             data = [{'id': slot.id,
+#                      'label': slot.slot_date.strftime('%Y-%m-%d') + " / " + slot.slot_start_time.strftime(
+#                          '%H:%M %p') + ' - ' + slot.slot_end_time.strftime(
+#                          '%H:%M %p')} for slot in slots]
+#             return JsonResponse(data, safe=False)
+#     if hms_utils.is_patient(request.user):
+#         patient = hospital_models.Patient.objects.get(patient__user=request.user)
+#         form = AppointmentForm(initial={"patient": patient})
+#         form.fields['patient'].disabled = True
+#     else:
+#         form = AppointmentForm()
+#
+#     context = {
+#         'form': form,
+#         'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+#         'messages': messages.get_messages(request),
+#
+#     }
+#     return render(request, 'appointment_form.html', context)
+
+
 def admin_add_appointment(request):
     if request.method == "POST":
         appointmentform = AppointmentForm(request.POST)
         if appointmentform.is_valid():
             slot = request.POST.get('slots')
-            patient = request.POST.get('patient')
+            try:
+                patient = hospital_models.Patient.objects.get(patient__user=request.user)
+            except hospital_models.Patient.DoesNotExist:
+                raise messages.error(request, "Patient does not exist")
             if not patient:
                 messages.error(request, "Please select patient")
             else:
-                appointmentform.save(commit=False)
+
+                model_instance = appointmentform.save(commit=False)
                 slot = hospital_models.Slots.objects.get(pk=slot)
                 slot.is_available = False
                 slot.save()
-                appointmentform.save()
+                doctor_name = slot.doctor.doctor.user.get_full_name()
+                patient_name = patient.patient.user.get_full_name()
+                patient_email = patient.patient.user.email
+                model_instance.patient = patient
+                model_instance.save()
+
+                res_slot_date = slot.slot_date
+                res_slot_str_time = slot.slot_start_time
+                res_slot_end_time = slot.slot_end_time
+                subject = "Appointment Alert"
+                message = f"Dear {patient_name},\n\nYour appointment for {res_slot_date} from {res_slot_str_time} to {res_slot_end_time} is confirmed with Dr. {doctor_name}."
+                send_mail(
+                    subject,
+                    message,
+                    'tm825141@gmail.com',
+                    [patient_email],
+                    fail_silently=True,
+                )
+                email = hospital_models.Email.objects.create(doctor=slot.doctor,
+                                                             patient=model_instance.patient,
+                                                             email=patient_email,
+                                                             message=message)
+
                 return redirect('appointment-data')
         else:
             return JsonResponse({'status': 'error', 'errors': appointmentform.errors})
@@ -913,13 +1093,22 @@ def admin_add_appointment(request):
                          '%H:%M %p')} for slot in slots]
             return JsonResponse(data, safe=False)
 
-    form = AppointmentForm()
-    context = {
-        'form': form,
-        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
-        'messages': messages.get_messages(request),
+    if hms_utils.is_patient(request.user):
+        try:
+            patient = hospital_models.Patient.objects.get(patient__user=request.user)
+        except hospital_models.Patient.DoesNotExist:
+            raise messages.error(request, "Patient does not exist")
+        form = AppointmentForm(initial={"patient": patient})
+        form.fields['patient'].disabled = True
+    else:
+        form = AppointmentForm()
 
-    }
+    context = {
+            'form': form,
+            'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+            'messages': messages.get_messages(request),
+
+        }
     return render(request, 'appointment_form.html', context)
 
 
@@ -951,7 +1140,7 @@ def diagnosis(request):
                         send_mail(
                             subject,
                             message,
-                            'sarmadaftab0@gmail.com',
+                            'tm825141@gmail.com',
                             [patient_email],
                             fail_silently=True,
                         )
@@ -977,7 +1166,7 @@ def diagnosis(request):
                 send_mail(
                     subject,
                     message,
-                    'sarmadaftab0@gmail.com',
+                    'tm825141@gmail.com',
                     [patient_email],
                     fail_silently=True
                 )

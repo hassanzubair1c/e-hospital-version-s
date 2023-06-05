@@ -49,7 +49,7 @@ class DoctorsAvailibility(models.Model):
     days = models.CharField(max_length=100, null=True, blank=True)
     starting_time = models.TimeField(null=True, blank=True)
     ending_time = models.TimeField(null=True, blank=True)
-    active = models.BooleanField(default=True, null=True, blank=True)
+    active = models.BooleanField(null=True, blank=True, default=True)
 
 
 class Slots(models.Model):
@@ -60,9 +60,12 @@ class Slots(models.Model):
     is_available = models.BooleanField(default=True, null=True, blank=True)
 
     def __str__(self):
-        return self.slot_date.strftime('%Y-%m-%d') + " / " + self.slot_start_time.strftime(
-            '%H:%M %p') + ' - ' + self.slot_end_time.strftime(
-            '%H:%M %p')
+        if self.slot_date:
+            return self.slot_date.strftime('%Y-%m-%d') + " / " + self.slot_start_time.strftime(
+                '%H:%M %p') + ' - ' + self.slot_end_time.strftime(
+                '%H:%M %p')
+        else:
+            return self.slot_date
 
 
 class Appointment(models.Model):
