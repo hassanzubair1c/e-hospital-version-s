@@ -17,7 +17,7 @@ from . import models as hospital_models, tables as hospital_tables
 from django.contrib.auth.decorators import login_required
 from . import utils as hms_utils
 from datetime import timedelta, datetime, time
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.core.mail import send_mail
 
 
@@ -532,20 +532,27 @@ def avalibility(request):
 
 
 def admin_side_avalibility(request):
-    try:
-        doctor = request.user.userprofile.doctor_profile.all().first()
-    except ObjectDoesNotExist:
-        return HttpResponse("User does not have a profile")
+    if hms_utils.is_doctor(request.user):
+        try:
+            doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+        except ObjectDoesNotExist:
+            return HttpResponse("User does not have a doctor profile")
+    else:
+        doctor = None
 
     if request.method == "POST":
         adminavailibilityform = AdminAvailabilityForm(request.POST)
         if adminavailibilityform.is_valid():
             new_availability = adminavailibilityform.save(commit=False)
-            new_availability.doctor = doctor
+            if hms_utils.is_doctor(request.user):
+                new_availability.doctor = doctor
+            else:
+                new_availability.doctor = adminavailibilityform.cleaned_data['doctor']
             start_time = new_availability.starting_time
             end_time = new_availability.ending_time
-            existing_availability_slots = hospital_models.DoctorsAvailibility.objects.filter(doctor=doctor,
-                                                                                             days=new_availability.days)
+            existing_availability_slots = hospital_models.DoctorsAvailibility.objects.filter(
+                doctor=new_availability.doctor,
+                days=new_availability.days)
 
             for existing_availability in existing_availability_slots:
                 if start_time >= existing_availability.starting_time and start_time < existing_availability.ending_time:
@@ -769,8 +776,11 @@ def delete_slot(request, pk):
 def add_single_slot(request):
     if request.method == "POST":
         single_slot_form = EditSlotForm(request.POST or None)
-        doctor_id = request.POST.get('doctor')
-        doctor = hospital_models.Doctor.objects.get(id=doctor_id)
+        if hms_utils.is_doctor(request.user):
+            doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+        else:
+            doctor_id = request.POST.get('doctor')
+            doctor = hospital_models.Doctor.objects.get(id=doctor_id)
         slot_date = request.POST.get('slot_date')
         slot_start_time_str = request.POST.get('slot_start_time')
         slot_end_time_str = request.POST.get('slot_end_time')
@@ -779,8 +789,8 @@ def add_single_slot(request):
 
         if single_slot_form.is_valid():
             # Convert slot start and end times to datetime.time objects
-            slot_start_time = datetime.strptime(slot_start_time_str, '%H:%M:%S').time()
-            slot_end_time = datetime.strptime(slot_end_time_str, '%H:%M:%S').time()
+            slot_start_time = datetime.strptime(slot_start_time_str, '%H:%M').time()
+            slot_end_time = datetime.strptime(slot_end_time_str, '%H:%M').time()
 
             # Calculate the duration between the start and end time
             duration = (datetime.combine(datetime.min, slot_end_time) - datetime.combine(datetime.min,
@@ -788,13 +798,15 @@ def add_single_slot(request):
 
             # Check if the duration is not equal to 15 minutes
             if duration != 15:
-                raise ValidationError("Slot duration must be exactly 15 minutes.")
+                return HttpResponseBadRequest("Slot duration must be exactly 15 minutes.")
 
             # Create the new slot object
             new_slot = hospital_models.Slots.objects.create(doctor=doctor, slot_date=slot_date,
                                                             slot_start_time=slot_start_time,
                                                             slot_end_time=slot_end_time, is_available=is_available)
             return redirect("slot-data")
+        else:
+            return HttpResponseBadRequest("Invalid form data")
     else:
         if hms_utils.is_doctor(request.user):
             doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
@@ -864,7 +876,6 @@ def appointment(request):
         'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
     }
     return render(request, 'appointment_form.html', context)
-
 
 
 def appointment_data(request):
@@ -1104,11 +1115,11 @@ def admin_add_appointment(request):
         form = AppointmentForm()
 
     context = {
-            'form': form,
-            'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
-            'messages': messages.get_messages(request),
+        'form': form,
+        'extends_to': 'dashboard/patient_base.html' if hms_utils.is_patient(request.user) else 'dashboard/base.html',
+        'messages': messages.get_messages(request),
 
-        }
+    }
     return render(request, 'appointment_form.html', context)
 
 
@@ -1123,7 +1134,10 @@ def diagnosis(request):
                         django_file = File(f)
                         model_instance = hospital_models.Diagnosis()
                         model_instance.note = request.POST.get('note')
-                        model_instance.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                        if hms_utils.is_doctor(request.user):
+                            model_instance.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                        else:
+                            model_instance.doctor = diagnosisform.cleaned_data['doctor']
                         model_instance.patient = hospital_models.Patient.objects.get(id=request.POST.get('patient'))
                         model_instance.diagnosis = request.POST.get('diagnosis')
                         model_instance.treatment = request.POST.get('treatment')
@@ -1154,7 +1168,10 @@ def diagnosis(request):
         else:
             if diagnosisform.is_valid():
                 model_instance = diagnosisform.save(commit=False)
-                model_instance.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                if hms_utils.is_doctor(request.user):
+                    model_instance.doctor = hospital_models.Doctor.objects.get(doctor__user=request.user)
+                else:
+                    model_instance.doctor = diagnosisform.cleaned_data['doctor']
                 model_instance.save()
                 messages.success(request, "Diagnose added successfully")
                 patient_email = model_instance.patient.patient.user.email

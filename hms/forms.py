@@ -153,16 +153,15 @@ class AdminAvailabilityForm(forms.ModelForm):
 
 
 class SlotsForm(forms.ModelForm):
-    month = forms.DateField(required=True, widget=forms.DateInput(
-        attrs={'format': '%Y-%m', 'type': 'month'}))
+    month = forms.DateField(required=True, widget=forms.DateInput(attrs={'type': 'month'}))
 
     class Meta:
         model = Slots
         fields = ['doctor', 'month']
 
         # widgets = {
-        #     "month": forms.DateInput(
-        #         attrs={'format': '%Y-%m', 'type': 'date', 'test':'test'}
+        #     "month": forms.DateTimeInput(
+        #         attrs={'format': '%Y-%m', 'type': 'month'}
         #     )
         # }
 
@@ -171,6 +170,11 @@ class EditSlotForm(forms.ModelForm):
     class Meta:
         model = Slots
         fields = ['doctor', 'slot_date', 'slot_start_time', 'slot_end_time', 'is_available']
+        widgets = {
+            'slot_date': forms.DateTimeInput(attrs={'type': 'date'}),
+            'slot_start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'slot_end_time': forms.TimeInput(attrs={'type': 'time'}),
+        }
 
 
 class AppointmentForm(forms.ModelForm):
